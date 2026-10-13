@@ -179,7 +179,6 @@ export const createMember = async (requestBody) => {
   );
 
   const responseText = await response.text();
-  console.log("📥 [MemberCreate] API response status:", response.status);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${responseText}`);

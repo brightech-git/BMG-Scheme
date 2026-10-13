@@ -125,7 +125,6 @@ export const markTxnProcessed = async (merchantTxnNo) => {
   try {
     await AsyncStorage.setItem(PROCESSED_TXN_PREFIX + merchantTxnNo, "true");
   } catch (e) {
-    console.error("[PaymentUtils] Failed to mark txn processed:", e);
   }
 };
 
@@ -144,7 +143,6 @@ export const savePendingPayment = async (record) => {
     filtered.push({ ...record, createdAt: record.createdAt || new Date().toISOString() });
     await AsyncStorage.setItem(PENDING_PAYMENTS_KEY, JSON.stringify(filtered));
   } catch (e) {
-    console.error("[PaymentUtils] Failed to save pending payment:", e);
   }
 };
 
@@ -170,6 +168,5 @@ export const clearPendingPayment = async (merchantTxnNo) => {
       JSON.stringify(list.filter((r) => r.merchantTxnNo !== merchantTxnNo))
     );
   } catch (e) {
-    console.error("[PaymentUtils] Failed to clear pending payment:", e);
   }
 };

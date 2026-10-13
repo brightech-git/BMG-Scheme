@@ -14,7 +14,6 @@ export const insertSchemeCollection = async (data) => {
     // Check if response is OK (status 200–299)
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ Server Error:", errorText);
       throw new Error(`HTTP Error ${response.status}: ${errorText}`);
     }
 
@@ -25,10 +24,8 @@ export const insertSchemeCollection = async (data) => {
         ? await response.json()
         : await response.text();
 
-    console.log("✅ Insert Success:", result);
     return result;
   } catch (error) {
-    console.error("❌ Error inserting scheme collection:", error);
     throw error;
   }
 };

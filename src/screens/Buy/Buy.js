@@ -1,3 +1,4 @@
+import { payWithRazorpay } from "../../services/RazorpayService";
 // screens/BuyPage.js
 import React, {
   useState,
@@ -39,40 +40,6 @@ const generateCashPaymentDetails = () => {
 // -----------------------------
 // API Functions
 // -----------------------------
-const getRedirectUrlApi = async (tranCtx) => {
-  const url = `${API_BASE_URL}/payment/redirect-url`;
-  console.log("[Payment] Getting redirect URL for transaction context");
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tranCtx }),
-  });
-
-  if (!response.ok) {
-    console.error(`[Payment] Redirect URL API failed: ${response.status}`);
-    throw new Error(`Failed to get URL: ${response.status}`);
-  }
-
-  const raw = await response.text();
-
-  let data = null;
-  try {
-    data = JSON.parse(raw);
-  } catch (err) {
-    console.log("[Payment] Response is not JSON, returning raw text");
-
-    // If server already returned URL directly
-    if (raw.startsWith("http")) {
-      return raw.trim();
-    }
-
-    throw new Error("Invalid JSON from redirect URL API");
-  }
-
-  return data.redirectUrl || data.url;
-};
-
 // -----------------------------
 // BuyPage component
 // -----------------------------
@@ -216,15 +183,12 @@ const BuyPage = () => {
         if (!isMountedRef.current) return;
         if (savedToken) {
           setToken(savedToken);
-          console.log("[Auth] Token loaded successfully");
         } else {
-          console.warn("[Auth] No token found, redirecting to login");
           Alert.alert("Authentication Required", "Please login", [
             { text: "OK", onPress: () => navigation.goBack() },
           ]);
         }
       } catch (error) {
-        console.error("[Auth] Error fetching token:", error);
         if (!isMountedRef.current) return;
         Alert.alert("Error", "Failed to authenticate. Please try again.");
       }
@@ -238,7 +202,6 @@ const BuyPage = () => {
     const fetchPaymentType = async () => {
       try {
         const url = `${API_BASE_URL_OLD}/account/getTranType`;
-        console.log("[Payment] Fetching payment types...");
         const res = await fetch(url);
         const json = await res.json();
 
@@ -250,9 +213,7 @@ const BuyPage = () => {
 
         setPayTypeResponse(json);
         setPayType(json[0].NAME);
-        console.log(`[Payment] Loaded ${json.length} payment types`);
       } catch (error) {
-        console.error("[Payment] Error fetching payment types:", error);
       } finally {
         if (active) setFetchingPaymentType(false);
       }
@@ -264,69 +225,6 @@ const BuyPage = () => {
   }, []);
 
   // Move this function inside the BuyPage component
-  const createOrder = useCallback(async (amount, productInfo) => {
-    try {
-      // Validate amount
-      const paymentAmount = amount || productInfo.defaultAmount;
-      if (!paymentAmount || isNaN(parseFloat(paymentAmount))) {
-        throw new Error("Invalid amount provided");
-      }
-
-      // Create payload
-      const orderPayload = {
-        amount: parseFloat(paymentAmount),
-        customer: {
-          name: productInfo.defaultName,
-          contact: productInfo.defaultContact,
-          REGNO: productInfo.defaultRegNo,
-          GROUPCODE: productInfo.defaultGroupCode,
-        },
-      };
-
-      console.log("Creating payment order with payload:", orderPayload);
-
-      // API call
-      const response = await fetch(`${API_BASE_URL}/orders/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(orderPayload),
-      });
-
-      console.log("Create order response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Create order error response:", errorText);
-        throw new Error(`Failed to create order: HTTP ${response.status}`);
-      }
-
-      // Convert data to JSON
-      const data = await response.json();
-      console.log("Order created successfully:", data);
-
-      // Extract order ID from response (adjust based on your API response structure)
-      const orderId =
-        data.order_id || data.id || data.transactionId || data.referenceNo;
-      console.log("Extracted order ID:", orderId);
-      if (!orderId) {
-        // NEVER invent an order ID client-side — a fabricated ID can't be
-        // matched by /payment/status and produces orphan transactions.
-        console.error("No order ID found in create-order response");
-        throw new Error(
-          "Could not create the payment order. Please try again in a moment."
-        );
-      }
-
-      return orderId;
-    } catch (error) {
-      console.log("Order creation error:", error);
-      throw error;
-    }
-  }, []);
-
   // -----------------------------
   // Build scheme collection payload
   // -----------------------------
@@ -369,13 +267,8 @@ const BuyPage = () => {
   // -----------------------------
   const insertCashPayment = useCallback(async () => {
     try {
-      console.log("\n💰 [INSTALLMENT-CASH] Starting cash installment payment");
-      console.log("💰 [INSTALLMENT-CASH] amount:", amount, "| payType:", payType);
-      console.log("💰 [INSTALLMENT-CASH] productInfo:", JSON.stringify(productInfo, null, 2));
       const schemeData = buildSchemeData();
-      console.log("💰 [INSTALLMENT-CASH] schemeData payload:", JSON.stringify(schemeData, null, 2));
       const insertResult = await insertSchemeCollection(schemeData);
-      console.log("✅ [INSTALLMENT-CASH] insertSchemeCollection result:", insertResult);
       navigation.navigate("PaymentSuccess", {
         status: "SUCCESS",
         orderDetails: {
@@ -400,7 +293,6 @@ const BuyPage = () => {
         paymentType: "installment",
       });
     } catch (error) {
-      console.error("❌ [INSTALLMENT-CASH] insertSchemeCollection failed:", error.message);
       // Navigate to PaymentFailure for cash payment errors too
       navigation.navigate("PaymentFailure", {
         orderDetails: {
@@ -427,16 +319,12 @@ const BuyPage = () => {
   // -----------------------------
   const handleBuy = useCallback(async () => {
     if (loading) return; // guard against double taps / duplicate submissions
-    console.log("\n🛒 [INSTALLMENT-HANDLEBUY] handleBuy triggered");
-    console.log("🛒 [INSTALLMENT-HANDLEBUY] payType:", payType, "| amount:", amount);
-    console.log("🛒 [INSTALLMENT-HANDLEBUY] productInfo:", JSON.stringify(productInfo, null, 2));
 
     if (
       productInfo.weightLedger === "N" &&
       productInfo.FixedIns === "N" &&
       !validateAmount(amount)
     ) {
-      console.log("🛒 [INSTALLMENT-HANDLEBUY] Validation failed:", amountError);
       Alert.alert(
         "Invalid Amount",
         amountError || "Please enter a valid amount."
@@ -448,134 +336,46 @@ const BuyPage = () => {
 
     try {
       if (payType === "CASH") {
-        console.log("🛒 [INSTALLMENT-HANDLEBUY] CASH selected — routing to insertCashPayment");
         await insertCashPayment();
         return;
       }
 
       // ONLINE/UPI flow
       if (!token) {
-        console.warn("[Payment] No authentication token available");
         Alert.alert("Authentication Required", "Please login to continue", [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
         return;
       }
 
-      const orderId = await createOrder(amount, productInfo);
-      console.log("🛒 [INSTALLMENT-HANDLEBUY] Order created. orderId:", orderId);
-
-      const payload = {
-        merchantTxnNo: orderId,
-        amount: parseFloat(amount || productInfo.defaultAmount),
-        currencyCode: "356",
-        transactionType: "SALE",
-        payType: "ONLINE",
-        addlParam1: productInfo.defaultRegNo,
-        addlParam2: productInfo.defaultGroupCode,
-        returnURL: "https://app.bmgjewellers.com/api/v1/payment/success",
+      const schemeData = {
+        ...buildSchemeData(), modePay: "O", accCode: "2",
+        chqCardNo: "", chqBranch: "RAZORPAY", chkBank: "ONLINE", chqRtnReason: "",
       };
-
-      // Same shape buildSchemeData() below produces for the cash path, so the backend
-      // (webhook fallback AND the guarded /account/insert path) can complete this
-      // installment even if the app is closed/killed after payment. chqRtnReason is
-      // stamped with the order id now (no PhiCommerce txnID exists yet) so the
-      // claimCreditOnce() guard can key off it as soon as the payment settles.
-      const schemeData = buildSchemeData();
-      schemeData.modePay = "O";
-      schemeData.accCode = "2";
-      schemeData.chqRtnReason = orderId;
-      // These get overwritten with the real gateway reference by PaymentWebView's own
-      // buildSchemeData() once the client completes crediting; this initiate-time
-      // snapshot only matters if the webhook ends up being the one to credit instead.
-      schemeData.chqBranch = "ONLINE";
-      schemeData.chkBank = "ONLINE";
-
-      console.log("🛒 [INSTALLMENT-HANDLEBUY] initiate-sale payload:", JSON.stringify(payload, null, 2));
-
-      // Plain JSON envelope (multipart/FormData was tried first but React Native's fetch
-      // doesn't reliably negotiate a multipart boundary against Spring's multipart
-      // resolver — it blanket-failed with 415 on real devices).
-      const initiate = await fetch(`${API_BASE_URL}/payment/initiate-sale`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          request: payload,
-          userType: "insupdate",
-          userDetails: JSON.stringify(schemeData),
-        }),
-      });
-
-      if (!initiate.ok) {
-        const errorData = await initiate.json().catch(() => ({}));
-        console.error("❌ [INSTALLMENT-HANDLEBUY] initiate-sale failed:", initiate.status, JSON.stringify(errorData, null, 2));
-        throw new Error(
-          errorData.message || `Payment initiation failed: ${initiate.status}`
-        );
+      if (!productInfo.defaultRegNo || !productInfo.defaultGroupCode) {
+        throw new Error("Missing scheme account details.");
       }
-
-      const data = await initiate.json();
-      console.log("🛒 [INSTALLMENT-HANDLEBUY] initiate-sale response:", JSON.stringify(data, null, 2));
-      if (!data.tranCtx) {
-        throw new Error("Transaction context not received");
-      }
-
-      let redirectUrl;
-      try {
-        redirectUrl = await getRedirectUrlApi(data.tranCtx);
-        console.log("🛒 [INSTALLMENT-HANDLEBUY] Redirect URL:", redirectUrl);
-      } catch (err) {
-        console.error("❌ [INSTALLMENT-HANDLEBUY] Failed to get redirect URL:", err.message);
-        Alert.alert(
-          "Payment Error",
-          "Failed to obtain payment redirect URL. Would you like to retry?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Retry",
-              onPress: () => {
-                try {
-                  (handleBuyRef.current || (() => {}))();
-                } catch (e) {
-                  console.error("[Payment] Retry call failed:", e);
-                }
-              },
-            },
-          ]
-        );
-        return;
-      }
-
-      const orderDetails = {
-        orderId,
-        merchantTxnNo: orderId,
-        amount: parseFloat(amount || productInfo.defaultAmount),
-        payType: payType || "ONLINE",
-        customer: {
-          name: productInfo.defaultName,
-          contact: productInfo.defaultContact,
-          regNo: productInfo.defaultRegNo,
-          groupCode: productInfo.defaultGroupCode,
-        },
-        schemeInfo: productData?.schemeSummary || {},
-        accountInfo: productData?.accountDetails || {},
-        personalInfo: productData?.personalInfo || {},
-        paymentUrl: redirectUrl,
-        timestamp: new Date().toISOString(),
-      };
-
-      console.log("🛒 [INSTALLMENT-HANDLEBUY] orderDetails to PaymentWebView:", JSON.stringify(orderDetails, null, 2));
-      navigation.navigate("PaymentWebView", {
-        paymentUrl: redirectUrl,
-        orderDetails,
+      const paymentAmount = Number(amount || productInfo.defaultAmount);
+      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) throw new Error("Invalid payment amount.");
+      const result = await payWithRazorpay({
+        token, newJoin: false,
+        body: { REGNO: productInfo.defaultRegNo, GROUPCODE: productInfo.defaultGroupCode,
+          AMOUNT: paymentAmount, SCHEMEDETAILS: { ...schemeData, amount: String(paymentAmount) } },
+        orderDetails: { amount: paymentAmount, payType: "ONLINE",
+          customer: { name: productInfo.defaultName, contact: productInfo.defaultContact,
+            regNo: productInfo.defaultRegNo, groupCode: productInfo.defaultGroupCode },
+          schemeInfo: productData?.schemeSummary || {} },
         productData,
-        payTypeResponse,
+      });
+      navigation.navigate("PaymentSuccess", {
+        ...result, status: "SUCCESS", schemeData, productData,
+        isCashPayment: false, isInstallmentPayment: true, paymentType: "installment",
       });
     } catch (error) {
-      console.error("❌ [INSTALLMENT-HANDLEBUY] error:", error.message);
+      if (error.cancelled) {
+        Alert.alert("Payment Cancelled", "Checkout was closed. Check payment history if money was deducted.");
+        return;
+      }
       Alert.alert(
         "Payment Error",
         error.message || "Unable to process payment. Please try again.",
@@ -587,7 +387,6 @@ const BuyPage = () => {
               try {
                 (handleBuyRef.current || (() => {}))();
               } catch (e) {
-                console.error("[Payment] Retry call failed:", e);
               }
             },
           },
@@ -608,7 +407,6 @@ const BuyPage = () => {
     productInfo,
     token,
     validateAmount,
-    createOrder,
     buildSchemeData,
   ]);
 
@@ -619,7 +417,6 @@ const BuyPage = () => {
       try {
         handleBuyRef.current && handleBuyRef.current();
       } catch (e) {
-        console.error("[Payment] Retry payment ref failed:", e);
       }
     };
   }, [handleBuy]);

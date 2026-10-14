@@ -3,12 +3,19 @@ import { API_BASE_URL_OLD } from "../Config/API";
 
 export const insertSchemeCollection = async (data) => {
   try {
+    const payload = {
+      schemeId: Number(data.schemeId),
+      groupCode: data.groupCode,
+      regNo: Number(data.regNo),
+      amount: String(data.amount),
+      installment: Number(data.installment),
+    };
     const response = await fetch(`${API_BASE_URL_OLD}/account/insert`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
 
     // Check if response is OK (status 200–299)

@@ -66,9 +66,9 @@ const SchemeDetailsPage = ({
   const numericSchemeId = selectedSchemeId ? Number(selectedSchemeId) : null;
   const effectiveSchemeName = schemeName || "Select a Scheme";
 
-  console.log("🔍 SchemeDetailsPage - Simplified:");
-  console.log("numericSchemeId:", numericSchemeId);
-  console.log("effectiveSchemeName:", effectiveSchemeName);
+  // console.log("🔍 SchemeDetailsPage - Simplified:");
+  // console.log("numericSchemeId:", numericSchemeId);
+  // console.log("effectiveSchemeName:", effectiveSchemeName);
 
   const [formData, setFormData] = useState({
     selectedSchemeId: numericSchemeId,

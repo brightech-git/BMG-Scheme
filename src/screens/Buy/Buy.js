@@ -28,15 +28,6 @@ import { COLORS, SIZES, FONTS, SHADOWS } from "../../utils/AppTheme";
 import CommonHeader from "../../components/CommonHeader/CommonHeader";
 import { insertSchemeCollection } from "../../services/InstallmentUpdateService";
 
-const generateCashPaymentDetails = () => {
-  const cardNumber = Math.floor(
-    1000000000 + Math.random() * 9000000000
-  ).toString();
-  const rtnNumber = Math.floor(100000 + Math.random() * 900000).toString();
-  const rtnReason = `CASH-${rtnNumber}`;
-  return { cardNumber, rtnReason };
-};
-
 // -----------------------------
 // API Functions
 // -----------------------------
@@ -230,36 +221,22 @@ const BuyPage = () => {
   // -----------------------------
   const buildSchemeData = useCallback(() => {
     const schemeInfo = productData?.schemeSummary || {};
-    const cashDetails = generateCashPaymentDetails();
+    const installment =
+      parseInt(schemeInfo?.schemaSummaryTransBalance?.insPaid?.toString() || "0") + 1 || 1;
 
     return {
-      groupCode: productInfo.defaultGroupCode || "BMA",
-      regNo: productInfo.defaultRegNo?.toString() || "41",
-      rDate: new Date().toISOString().split("T")[0],
-      amount: amount || productInfo.defaultAmount?.toString() || "1000",
-      modePay: payTypeObj?.CARDTYPE || "",
-      accCode: payTypeObj?.ACCOUNT || "",
-      updateTime: new Date().toISOString().split("T")[0],
-      installment:
-        parseInt(
-          schemeInfo?.schemaSummaryTransBalance?.insPaid?.toString() || "0"
-        ) + 1 || 1,
-      userID: "999",
-      chqBankCode: "2",
-      chqCardNo: cashDetails.cardNumber,
-      chqBranch: "RECEIVED",
-      chkBank: "CASH",
-      chqRtnReason: cashDetails.rtnReason,
-      schemeId: schemeInfo.schemeId,
+      schemeId: Number(schemeInfo.schemeId),
+      groupCode: productInfo.defaultGroupCode,
+      regNo: Number(productInfo.defaultRegNo),
+      amount: String(amount || productInfo.defaultAmount),
+      installment,
     };
   }, [
     amount,
-    payTypeObj,
     productData,
     productInfo.defaultGroupCode,
     productInfo.defaultRegNo,
     productInfo.defaultAmount,
-    productInfo.schemeId,
   ]);
 
   // -----------------------------
@@ -348,10 +325,7 @@ const BuyPage = () => {
         return;
       }
 
-      const schemeData = {
-        ...buildSchemeData(), modePay: "O", accCode: "2",
-        chqCardNo: "", chqBranch: "RAZORPAY", chkBank: "ONLINE", chqRtnReason: "",
-      };
+      const schemeData = buildSchemeData();
       if (!productInfo.defaultRegNo || !productInfo.defaultGroupCode) {
         throw new Error("Missing scheme account details.");
       }

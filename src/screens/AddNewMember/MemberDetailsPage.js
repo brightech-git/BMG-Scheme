@@ -583,7 +583,7 @@ const MemberDetailsPage = ({
           nomineeAadhaarNumber: memberForm.nomineeAadhaarNumber || prev.nomineeAadhaarNumber || "",
           nomineeAadhaarVerified: memberForm.nomineeAadhaarVerified || false,
           nomineeAadhaarVerificationId: memberForm.nomineeAadhaarVerificationId || "",
-          nomineeName: memberForm.nomineeName || prev.nomineeName || "",
+          // nomineeName: memberForm.nomineeName || prev.nomineeName || "",
           nomineeDOB: memberForm.nomineeDOB || prev.nomineeDOB || "",
           nomineeGender: memberForm.nomineeGender || prev.nomineeGender || "",
           nomineeAddress: memberForm.nomineeAddress || prev.nomineeAddress || "",
@@ -797,7 +797,7 @@ const MemberDetailsPage = ({
           const clearedNomineeFields = {
             nomineeAadhaarVerified: false,
             nomineeAadhaarVerificationId: "",
-            nomineeName: "",
+            // nomineeName: "",
             nomineeDOB: "",
             nomineeGender: "",
             nomineeAddress: "",
@@ -972,7 +972,7 @@ const MemberDetailsPage = ({
 
         if (aadhaarData.name) {
           updates.nomeni = aadhaarData.name;
-          updates.nomineeName = aadhaarData.name;
+          // updates.nomineeName = aadhaarData.name;
         }
 
         if (aadhaarData.dob) {
@@ -1439,8 +1439,10 @@ const MemberDetailsPage = ({
         if (panErr) errors.panNumber = panErr;
       }
 
-      // Aadhaar - only validate if not from API
-      if (!userData?.maskedAadhaar) {
+      // Aadhaar - skip if already verified (API user) or masked value present
+      const aadhaarAlreadyVerified = isAadhaarValid || userData?.aadhaarVerified || !!userData?.maskedAadhaar;
+      console.log("AADHAAR DEBUG:", { isAadhaarValid, aadhaarVerified: userData?.aadhaarVerified, maskedAadhaar: userData?.maskedAadhaar, aadharNumber: d.aadharNumber, aadhaarAlreadyVerified });
+      if (!aadhaarAlreadyVerified) {
         const aadhaarErr = validateAadhaar(
           d.aadharNumber?.replace(/\s/g, "") || ""
         );
@@ -1449,7 +1451,7 @@ const MemberDetailsPage = ({
 
       return errors;
     },
-    [nomineeAadhaarStatus.isVerified, userData, getUserAadhaarLast4]
+    [nomineeAadhaarStatus.isVerified, userData, getUserAadhaarLast4, isAadhaarValid]
   );
 
   const getMaskedAadhaarWithLast4 = (aadhaar) => {
@@ -1488,12 +1490,13 @@ const MemberDetailsPage = ({
         address2: formData.area.trim(),
         area: formData.area.trim(),
         city: formData.city.trim(),
-        pincode: formData.pincode,
-        selectedState: formData.state.trim(),
+        pinCode: formData.pincode,
+        state: formData.state.trim(),
         country: "India",
 
-        panNumber: formData.panNumber,
-        aadharNumber: formData.aadharNumber.replace(/\s/g, ""),
+        panno: formData.panNumber,
+        idProof: "Aadhaar",
+        idProofNo: userData?.maskedAadhaar || formData.aadharNumber.replace(/\s|-/g, ""),
         aadhaarVerified: isAadhaarValid || userData?.aadhaarVerified || false,
 
         nomeni: formData.nomeni.trim(),
@@ -1505,7 +1508,7 @@ const MemberDetailsPage = ({
           nomineeAadhaarStatus.verificationId ||
           formData.nomineeAadhaarVerificationId,
 
-        nomineeName: formData.nomineeName || formData.nomeni.trim(),
+        // nomineeName: formData.nomineeName || formData.nomeni.trim(),
         nomineeDOB: formData.nomineeDOB,
         nomineeGender: formData.nomineeGender,
         nomineeAddress: formData.nomineeAddress,

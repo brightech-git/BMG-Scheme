@@ -5,15 +5,63 @@ import {
   onTokenRefresh,
   onNotificationOpenedApp,
   getInitialNotification,
-  requestPermission,
-  AuthorizationStatus,
 } from "@react-native-firebase/messaging";
-import notifee, { AndroidImportance, AndroidVisibility, EventType } from "@notifee/react-native";
+import notifee, { AndroidImportance, AndroidVisibility, AuthorizationStatus, EventType } from "@notifee/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../Config/API";
 
 const fcm = getMessaging();
 export const CHANNEL_ID = "bmg_default";
+
+let permissionCheck = null;
+let tokenRefreshSubscription = null;
+let welcomeNotification = null;
+const WELCOME_NOTIFICATION_KEY = "notificationWelcomeSent:v1";
+const notificationsEnabled = (settings) =>
+  settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+  settings.authorizationStatus === AuthorizationStatus.PROVISIONAL;
+
+// Share a single check so startup and screen mounting cannot show duplicate dialogs.
+export function ensureNotificationPermission() {
+  if (permissionCheck) return permissionCheck;
+  permissionCheck = (async () => {
+    await createNotificationChannel();
+    let settings = await notifee.getNotificationSettings();
+    if (notificationsEnabled(settings)) {
+      await sendWelcomeNotificationOnce();
+      return true;
+    }
+
+    if (Platform.OS === "android" && Platform.Version >= 33) {
+      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    } else if (Platform.OS === "ios" && settings.authorizationStatus === AuthorizationStatus.NOT_DETERMINED) {
+      await notifee.requestPermission();
+    }
+
+    settings = await notifee.getNotificationSettings();
+    if (notificationsEnabled(settings)) {
+      await sendWelcomeNotificationOnce();
+      return true;
+    }
+
+    // After denial, the OS may require the user to enable permission in Settings.
+    await new Promise(resolve => {
+      Alert.alert("Allow Notifications", "Enable notifications to receive payment and scheme updates.", [
+        { text: "Not Now", style: "cancel", onPress: resolve },
+        { text: "Open Settings", onPress: () => {
+          notifee.openNotificationSettings().catch(error => {
+            console.error("Unable to open notification settings:", error);
+          }).finally(resolve);
+        } },
+      ], { cancelable: true, onDismiss: resolve });
+    });
+    return false;
+  })().catch(error => {
+    console.error("Notification permission check failed:", error);
+    return false;
+  }).finally(() => { permissionCheck = null; });
+  return permissionCheck;
+}
 
 /* ── Create Android channel ── */
 export async function createNotificationChannel() {
@@ -52,6 +100,24 @@ export async function displayNotification(title, body, data, imageUrl) {
   });
 }
 
+// Persist only after display succeeds, so a failed attempt can retry on next open.
+export function sendWelcomeNotificationOnce() {
+  if (welcomeNotification) return welcomeNotification;
+  welcomeNotification = (async () => {
+    if (!notificationsEnabled(await notifee.getNotificationSettings())) return;
+    if (await AsyncStorage.getItem(WELCOME_NOTIFICATION_KEY)) return;
+    await displayNotification(
+      "Welcome to BMG Digi Silver!",
+      "Notifications are enabled. Stay updated on your payments, schemes, and latest offers.",
+      { type: "welcome" }
+    );
+    await AsyncStorage.setItem(WELCOME_NOTIFICATION_KEY, "true");
+  })().catch(error => {
+    console.error("Welcome notification failed:", error);
+  }).finally(() => { welcomeNotification = null; });
+  return welcomeNotification;
+}
+
 /* ── Device ID ── */
 async function generateDeviceId() {
   const saved = await AsyncStorage.getItem("deviceId");
@@ -83,32 +149,15 @@ export async function registerForPushNotifications(userId) {
   try {
     await createNotificationChannel();
 
-    // Android 13+ permission
-    if (Platform.OS === "android" && Platform.Version >= 33) {
-      const result = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
-      );
-      if (result !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert("Notifications Disabled", "Enable notifications to receive important updates.");
-        return null;
-      }
-    }
-
-    const authStatus = await requestPermission(fcm);
-    const enabled =
-      authStatus === AuthorizationStatus.AUTHORIZED ||
-      authStatus === AuthorizationStatus.PROVISIONAL;
-
-    if (!enabled) {
-      Alert.alert("Notifications Disabled", "Enable notifications to receive important updates.");
-      return null;
-    }
+    // App.js owns permission prompts; registration itself must not repeat them.
+    if (!notificationsEnabled(await notifee.getNotificationSettings())) return null;
 
     const fcmToken = await getToken(fcm);
 
     if (userId) await sendPushTokenToServer(fcmToken, userId);
 
-    onTokenRefresh(fcm, async (newToken) => {
+    tokenRefreshSubscription?.();
+    tokenRefreshSubscription = onTokenRefresh(fcm, async (newToken) => {
       if (userId) await sendPushTokenToServer(newToken, userId);
     });
 

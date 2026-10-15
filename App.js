@@ -35,7 +35,7 @@ export default function App() {
 
         setTimeout(() => checkForAppUpdate(), 1500);
       } catch (error) {
-        console.log("Initialization error:", error);
+        console.error("Initialization error:", error);
         setAppEnabled(false);
       }
     };

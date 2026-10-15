@@ -4,21 +4,18 @@ class NotificationService {
   // Get all notifications for a user
   async getUserNotifications(userId) {
     try {
-      console.log(`Fetching notifications for user: ${userId}`);
       const response = await fetch(
         `${API_BASE_URL}/notifications/user/${userId}`
       );
-      
-      console.log(`Response status: ${response.status}`);
-      
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-      
+
       const data = await response.json();
-      console.log(`Notifications data received:`, data);
 
       return {
         code: 200,
@@ -38,21 +35,21 @@ class NotificationService {
   // Get unread notification count for a user
   async getUnreadCount(userId) {
     try {
-      // console.log(`Fetching unread count for user: ${userId}`);
+
       const response = await fetch(
         `${API_BASE_URL}/notifications/user/${userId}/unread-count`
       );
-      
-      // console.log(`Unread count response status: ${response.status}`);
-      
+
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      // console.log(`Unread count data:`, data);
+
 
       return {
         code: 200,
@@ -76,7 +73,6 @@ class NotificationService {
   // Mark all notifications as read for a user
   async markAllAsRead(userId) {
     try {
-      console.log(`Marking all as read for user: ${userId}`);
       const response = await fetch(
         `${API_BASE_URL}/notifications/read/all/${userId}`,
         {
@@ -87,17 +83,15 @@ class NotificationService {
           },
         }
       );
-      
-      console.log(`Mark all response status: ${response.status}`);
-      
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log(`Mark all data:`, data);
 
       return {
         code: 200,
@@ -120,7 +114,6 @@ class NotificationService {
   // Mark a specific notification as read
   async markAsRead(notificationId, userId) {
     try {
-      console.log(`Marking notification ${notificationId} as read for user ${userId}`);
       const response = await fetch(
         `${API_BASE_URL}/notifications/read/${notificationId}/user/${userId}`,
         {
@@ -131,17 +124,15 @@ class NotificationService {
           },
         }
       );
-      
-      console.log(`Mark as read response status: ${response.status}`);
-      
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      console.log(`Mark as read data:`, data);
 
       return {
         code: 200,
@@ -164,7 +155,6 @@ class NotificationService {
   // Delete a single notification by ID
   async deleteNotification(notificationId) {
     try {
-      console.log(`Deleting notification: ${notificationId}`);
       const response = await fetch(
         `${API_BASE_URL}/notifications/notification/${notificationId}`,
         {
@@ -175,15 +165,14 @@ class NotificationService {
           },
         }
       );
-      
-      console.log(`Delete response status: ${response.status}`);
-      
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
 
       return {
@@ -200,7 +189,6 @@ class NotificationService {
   // Delete all notifications for a user
   async deleteAllNotifications(userId) {
     try {
-      console.log(`Deleting all notifications for user: ${userId}`);
       const response = await fetch(
         `${API_BASE_URL}/notifications/user/${userId}`,
         {
@@ -211,15 +199,14 @@ class NotificationService {
           },
         }
       );
-      
-      console.log(`Delete all response status: ${response.status}`);
-      
+
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`Server error details: ${errorText}`);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
 
       return {

@@ -40,7 +40,6 @@ const OnboardingScreen = ({ navigation }) => {
       const data = await bannerService.getBanners();
       setBanners([...data].reverse());
     } catch (error) {
-      console.log("Using fallback banners");
       setBanners([...fallbackBanners].reverse());
     } finally {
       setLoading(false);

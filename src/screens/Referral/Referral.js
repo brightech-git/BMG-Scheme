@@ -113,7 +113,7 @@ const ReferralScreen = () => {
           }));
 
           setReferralHistory(history);
-          
+
           // Calculate total bonus from transactions if wallet_balance is not provided
           if (!referrer.wallet_balance && transactions.length > 0) {
             const totalFromHistory = transactions.reduce(
@@ -124,7 +124,6 @@ const ReferralScreen = () => {
           }
         } else {
           // Fallback to old structure handling
-          console.log("Using old data structure format");
           if (Array.isArray(data) && data.length > 0) {
             const userInfo = data[0];
             setReferralCode(userInfo.referral_code || "");
@@ -210,7 +209,6 @@ const ReferralScreen = () => {
       ) {
         setReferralSchemes(schemesData.data);
       } else {
-        console.log("No scheme data found or unexpected format:", schemesData);
         setReferralSchemes([]);
       }
     } catch (error) {
@@ -638,7 +636,7 @@ const ReferralScreen = () => {
           {/* ===== HOW IT WORKS ===== */}
           {renderHowItWorks()}
 
-          
+
         </ScrollView>
 
         {/* Redeem Modal */}

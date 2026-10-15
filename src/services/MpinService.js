@@ -7,7 +7,6 @@ import { API_BASE_URL_2 } from "../Config/API";
 const getHeaders = async () => {
   try {
     const token = await getAuthToken();
-    console.log("🟢 Retrieved token:", token ? "Exists" : "Missing");
 
     if (!token) console.warn("⚠️ No auth token found in AsyncStorage!");
 
@@ -41,7 +40,6 @@ export const createMpinApi = async (mpin) => {
   try {
     const headers = await getHeaders();
     const token = await getAuthToken();
-    console.log("📤 Create MPIN Request Headers:", headers);
 
     const response = await fetch(
       `${API_BASE_URL_2}/create?mpin=${encodeURIComponent(mpin)}`,
@@ -55,7 +53,6 @@ export const createMpinApi = async (mpin) => {
     } catch {
       result = resultText;
     }
-    console.log("📩 Create MPIN Response:", result);
 
     // ✅ Handle 409 Conflict
     if (response.status === 409) {
@@ -85,7 +82,6 @@ export const verifyMpinApi = async (mpin) => {
       { method: "POST", headers }
     );
     const result = await parseResponse(response);
-    console.log("📩 Verify MPIN Response:", result);
     return result;
   } catch (error) {
     console.error("❌ Verify MPIN API Error:", error);
@@ -100,7 +96,6 @@ export const verifyMpinApi = async (mpin) => {
 export const resetMpinApi = async (newMpin) => {
   try {
     const headers = await getHeaders();
-    console.log("📤 Reset MPIN Request Headers:", headers);
 
     const response = await fetch(
       `${API_BASE_URL_2}/reset?newMpin=${encodeURIComponent(newMpin)}`,
@@ -108,7 +103,6 @@ export const resetMpinApi = async (newMpin) => {
     );
 
     const result = await parseResponse(response);
-    console.log("📩 Reset MPIN Response:", result);
 
     // Token expired or unauthorized
     if (response.status === 401 || response.status === 403) {
@@ -133,11 +127,9 @@ export const resetMpinApi = async (newMpin) => {
 export const resetMpinWithOldApi = async (oldMpin, newMpin) => {
   try {
     const headers = await getHeaders();
-    console.log("📤 Reset MPIN Request Headers:", headers);
 
     // FIXED: Use the correct endpoint structure
     const url = `${API_BASE_URL_2}/resetMpin?oldMpin=${encodeURIComponent(oldMpin)}&newMpin=${encodeURIComponent(newMpin)}`;
-    console.log("📤 Reset MPIN URL:", url);
 
     const response = await fetch(url, {
       method: "POST",
@@ -146,8 +138,6 @@ export const resetMpinWithOldApi = async (oldMpin, newMpin) => {
 
     const result = await parseResponse(response);
 
-    console.log("📩 Response Status:", response.status);
-    console.log("📩 Response Body:", result);
 
     // Handle 400 Bad Request - Old MPIN incorrect or same as new
     if (response.status === 400) {
@@ -190,7 +180,7 @@ export const resetMpinWithOldApi = async (oldMpin, newMpin) => {
 export const incrementFailedAttemptsApi = async (contactNumber) => {
   try {
     const headers = await getHeaders();
-    console.log("📤 Increment Failed Attempts Headers:", headers);
+    console.error("📤 Increment Failed Attempts Headers:", headers);
 
     const response = await fetch(
       `${API_BASE_URL_2}/increment-failed-attempts?contactNumber=${encodeURIComponent(contactNumber)}`,
@@ -198,7 +188,7 @@ export const incrementFailedAttemptsApi = async (contactNumber) => {
     );
 
     const result = await parseResponse(response);
-    console.log("📩 Increment Failed Attempts Response:", result);
+    console.error("📩 Increment Failed Attempts Response:", result);
 
     if (!response.ok) throw new Error(result?.message || result || "Failed to increment attempts");
     return result;
@@ -215,7 +205,7 @@ export const incrementFailedAttemptsApi = async (contactNumber) => {
 export const resetFailedAttemptsApi = async (contactNumber) => {
   try {
     const headers = await getHeaders();
-    console.log("📤 Reset Failed Attempts Headers:", headers);
+    console.error("📤 Reset Failed Attempts Headers:", headers);
 
     const response = await fetch(
       `${API_BASE_URL_2}/reset-failed-attempts?contactNumber=${encodeURIComponent(contactNumber)}`,
@@ -223,7 +213,7 @@ export const resetFailedAttemptsApi = async (contactNumber) => {
     );
 
     const result = await parseResponse(response);
-    console.log("📩 Reset Failed Attempts Response:", result);
+    console.error("📩 Reset Failed Attempts Response:", result);
 
     if (!response.ok) throw new Error(result?.message || result || "Failed to reset attempts");
     return result;

@@ -66,9 +66,9 @@ const SchemeDetailsPage = ({
   const numericSchemeId = selectedSchemeId ? Number(selectedSchemeId) : null;
   const effectiveSchemeName = schemeName || "Select a Scheme";
 
-  // console.log("🔍 SchemeDetailsPage - Simplified:");
-  // console.log("numericSchemeId:", numericSchemeId);
-  // console.log("effectiveSchemeName:", effectiveSchemeName);
+
+
+
 
   const [formData, setFormData] = useState({
     selectedSchemeId: numericSchemeId,
@@ -93,7 +93,6 @@ const SchemeDetailsPage = ({
   // Update formData when scheme changes
   useEffect(() => {
     if (numericSchemeId && numericSchemeId !== formData.selectedSchemeId) {
-      console.log("🔄 Updating formData with scheme ID:", numericSchemeId);
       setFormData(prev => ({
         ...prev,
         selectedSchemeId: numericSchemeId,
@@ -187,7 +186,6 @@ const SchemeDetailsPage = ({
         ...formData,
         selectedSchemeId: numericSchemeId
       };
-      console.log("Submitting scheme data:", dataToSubmit);
       onSubmit(dataToSubmit);
     } else {
       Alert.alert(

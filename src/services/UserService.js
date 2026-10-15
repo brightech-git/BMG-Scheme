@@ -11,7 +11,6 @@ const getAuthHeader = async () => {
 // Unified fetch wrapper (simplified logging)
 // Unified fetch wrapper (fixed to handle business logic errors)
 const request = async (url, options = {}, requireAuth = true, apiName = "Unknown API") => {
-  console.log(`▶️ [${apiName}] START`);
 
   let headers = { "Content-Type": "application/json", ...options.headers };
   if (requireAuth) {
@@ -32,7 +31,6 @@ const request = async (url, options = {}, requireAuth = true, apiName = "Unknown
 
     // Check both HTTP status AND business logic errors in response
     if (!response.ok) {
-      console.log(`❌ [${apiName}] HTTP ERROR: ${response.status}`);
       const errorMessage =
         data?.message ||
         data?.error ||
@@ -65,7 +63,6 @@ const request = async (url, options = {}, requireAuth = true, apiName = "Unknown
     );
 
     if (hasBusinessError) {
-      console.log(`❌ [${apiName}] BUSINESS ERROR: ${data.message}`);
       return {
         success: false,
         error: data.message || "Operation failed",
@@ -74,24 +71,20 @@ const request = async (url, options = {}, requireAuth = true, apiName = "Unknown
       };
     }
 
-    console.log(`✅ [${apiName}] SUCCESS`);
     return { success: true, data };
   } catch (err) {
-    console.log(`🚨 [${apiName}] NETWORK ERROR`);
     return {
       success: false,
       error: err.message || "Network error",
       isNetworkError: true,
     };
   } finally {
-    console.log(`⏹ [${apiName}] END`);
   }
 };
 
 const userService = {
   // ---------------- Public APIs ----------------
   registerUser: async (userData) => {
-    console.log("🟢 Register User - Step 1: Initiating");
     return request(
       `${API_BASE_URL}/user/register`,
       {
@@ -104,7 +97,6 @@ const userService = {
   },
 
   verifyOtp: async (contactNumber, otp) => {
-    console.log("🟢 Verify OTP - Step 1: Sending");
     const params = new URLSearchParams({ contactNumber, otp });
     return request(
       `${API_BASE_URL}/user/verify-otp?${params.toString()}`,
@@ -115,7 +107,6 @@ const userService = {
   },
 
   loginUser: async (credentials) => {
-    console.log("🟢 Login User - Step 1: Authenticating");
     const res = await request(
       `${API_BASE_URL}/user/login`,
       {
@@ -127,17 +118,15 @@ const userService = {
     );
 
     if (res.success && res.data?.token) {
-      console.log("🟢 Login User - Step 2: Saving Token");
       await AsyncStorage.setItem("authToken", res.data.token);
     } else {
-      console.log("🔴 Login User - Step 2: Failed (No token)");
+      console.error("🔴 Login User - Step 2: Failed (No token)");
     }
 
     return res;
   },
 
   forgotPassword: async (data) => {
-    console.log("🟢 Forgot Password - Step 1: Requesting");
     return request(
       `${API_BASE_URL}/user/forgot-password`,
       {
@@ -150,7 +139,6 @@ const userService = {
   },
 
   resetPassword: async (data) => {
-    console.log("🟢 Reset Password - Step 1: Submitting");
     return request(
       `${API_BASE_URL}/user/reset-password`,
       {
@@ -200,12 +188,11 @@ checkReferralCode: async (userId, referralCode) => {
 },
 
 
-    
-  
+
+
 
   // ---------------- Authenticated APIs ----------------
   getUserById: async (id) => {
-    console.log("🟢 Get User By ID - Step 1: Fetching");
     return request(
       `${API_BASE_URL}/user/getUserMasterDataById/${id}`,
       {},
@@ -215,12 +202,10 @@ checkReferralCode: async (userId, referralCode) => {
   },
 
   getProfile: async () => {
-    console.log("🟢 Get Profile - Step 1: Fetching");
     return request(`${API_BASE_URL}/user/profile`, {}, true, "GET_PROFILE");
   },
 
   googleLogin: async (payload) => {
-    console.log("🟢 Google Login - Step 1: Sending Data");
     const res = await request(
       `${API_BASE_URL}/google-login`,
       {
@@ -232,26 +217,22 @@ checkReferralCode: async (userId, referralCode) => {
     );
 
     if (res.success && res.data?.token) {
-      console.log("🟢 Google Login - Step 2: Saving Token");
       await AsyncStorage.setItem("authToken", res.data.token);
     } else {
-      console.log("🔴 Google Login - Step 2: Failed");
+      console.error("🔴 Google Login - Step 2: Failed");
     }
 
     return res;
   },
 
   debugAuthStatus: async () => {
-    console.log("🟢 Debug Auth - Checking Stored Data");
     const token = await AsyncStorage.getItem("authToken");
     const debugData = await AsyncStorage.getItem("debug_user_data");
     return { hasToken: !!token, debugData };
   },
 
   clearAuthData: async () => {
-    console.log("🧹 Clearing Auth Data");
     await AsyncStorage.multiRemove(["authToken", "debug_user_data"]);
-    console.log("✅ Cleared");
   },
 };
 

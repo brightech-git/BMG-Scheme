@@ -27,6 +27,7 @@ export const sanitizePaymentLog = (value, seen = new WeakSet()) => {
 export const createPaymentLogger = (flow) => {
   const traceId = `${flow}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   return (step, event, details = {}, level = "log") => {
+    if (level !== "warn" && level !== "error") return;
     const operation = step.includes("CREATE ORDER") ? "CREATE ORDER"
       : step.includes("VERIFY PAYMENT") ? "VERIFY PAYMENT"
       : step.includes("CHECKOUT") ? "RAZORPAY CHECKOUT" : "PAYMENT API";

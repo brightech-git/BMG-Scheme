@@ -9,8 +9,7 @@ async fetchUserData(userId) {
   if (!userId) throw new Error("User ID is required");
 
   try {
-    console.log("🌐 Fetching user data without token...");
-    
+
     const response = await fetch(`${API_BASE_URL}/user/${userId}`, {
       method: "GET",
       headers: { 
@@ -19,10 +18,9 @@ async fetchUserData(userId) {
       }
     });
 
-    console.log("📥 Response status:", response.status);
-    
+
     const responseText = await response.text();
-    
+
     if (!response.ok) {
       console.error("❌ Fetch error response:", responseText);
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -41,9 +39,7 @@ async fetchUserData(userId) {
     try {
       // Get token before making request
       const token = await getAuthToken();
-      console.log("🔐 Token for update API:", token ? "Exists" : "Missing");
-      console.log("📤 Sending update data:", JSON.stringify(formData, null, 2));
-      
+
       const response = await fetch(`${API_BASE_URL}/${userId}/update`, {
         method: "PATCH",
         headers: { 
@@ -53,7 +49,6 @@ async fetchUserData(userId) {
       });
 
       const result = await response.json();
-      console.log("📥 Update API response:", result);
 
       if (!response.ok) {
         throw new Error(result.message || "Failed to update user data");
@@ -67,12 +62,10 @@ async fetchUserData(userId) {
 
       // If OTP is sent, return early
       if (result.otpSent === true) {
-        console.log("📱 OTP sent to phone");
         return { otpSent: true };
       }
 
       // If update is successful, return the updated data
-      console.log("✅ Server update successful, returning data");
       return result;
     } catch (error) {
       console.error("❌ Error updating user data:", error);
@@ -83,11 +76,10 @@ async fetchUserData(userId) {
   // ===== OTP VERIFICATION =====
   async verifyOTP(userId, otp) {
     if (!userId) throw new Error("User ID is required");
-    console.log("User ID:", userId);
 
     try {
       const token = await getAuthToken();
-      
+
       const response = await fetch(`${API_BASE_URL}/${userId}/verify-otp`, {
         method: "POST",
         headers: { 
@@ -346,12 +338,12 @@ export const parseAadhaarAddress = (addressString, splitAddressData) => {
         country: splitAddressData.country || "India"
       };
     }
-    
+
     // Fallback: Parse the address string
     if (!addressString) return null;
-    
+
     const parts = addressString.split(',').map(part => part.trim()).filter(part => part);
-    
+
     if (parts.length >= 9) {
       return {
         address1: parts[0] || "",
@@ -362,7 +354,7 @@ export const parseAadhaarAddress = (addressString, splitAddressData) => {
         country: parts[7] || "India"
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error parsing address:", error);
@@ -372,13 +364,13 @@ export const parseAadhaarAddress = (addressString, splitAddressData) => {
 
 export const formatDateOfBirth = (dobString) => {
   if (!dobString) return "";
-  
+
   if (dobString.includes('-')) {
     const parts = dobString.split('-');
     if (parts.length === 3) {
       return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
   }
-  
+
   return dobString;
 };

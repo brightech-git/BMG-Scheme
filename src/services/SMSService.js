@@ -77,7 +77,6 @@ const smsService = {
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        console.log(`📤 Sending SMS (Attempt ${attempt})...`);
 
         const response = await fetch(`${API_BASE_URL}/sms/send`, {
           method: "POST",
@@ -101,7 +100,6 @@ const smsService = {
             data = text;
           }
 
-          console.log("✅ SMS sent successfully:", data);
           return data;
         }
       } catch (error) {

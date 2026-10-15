@@ -36,29 +36,25 @@ const AmountScheme = ({
   // Fetch amounts when scheme changes
   useEffect(() => {
     const fetchAmounts = async () => {
-      console.log("Fetching amounts for BMG AMOUNT SCHEME (ID: 1)");
       setLoading(true);
       try {
         const response = await fetch(
           `${API_BASE_URL_OLD}/member/schemeid?schemeId=${numericSchemeId}`
         );
-        
-        console.log("Amounts API Response status:", response.status);
-        
+
+
         if (!response.ok) {
           throw new Error(`Failed to fetch amounts. Status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log("Fetched amounts data:", data);
-        
+
         const formattedAmounts = data.map((item) => ({
           value: item.AMOUNT.toString(),
           groupCode: item.GROUPCODE,
           currentRegNo: item.CURRENTREGNO,
         }));
 
-        console.log("Formatted amounts:", formattedAmounts);
         setAmounts(formattedAmounts);
       } catch (error) {
         console.error("Error fetching amounts:", error);
@@ -79,10 +75,8 @@ const AmountScheme = ({
   }, [numericSchemeId, API_BASE_URL_OLD]);
 
   const handleAmountSelection = (itemValue) => {
-    console.log("Selected amount value:", itemValue);
     const selectedAmount = amounts.find((amt) => amt.value === itemValue);
-    console.log("Selected amount object:", selectedAmount);
-    
+
     updateFormData('amount', itemValue);
     if (selectedAmount) {
       updateFormData('selectedGroupCodeObj', selectedAmount.groupCode);
@@ -93,7 +87,7 @@ const AmountScheme = ({
   // Validate Amount Scheme specific fields
   useEffect(() => {
     const errors = { ...validationErrors };
-    
+
     if (!formData?.amount) {
       errors.amount = "Please select an amount";
     } else {
@@ -148,7 +142,7 @@ const AmountScheme = ({
         </Text>
         <Text style={styles.asterisk}>*</Text>
       </View>
-      
+
       <Text style={styles.subLabel}>
         Select your preferred investment amount from available options
       </Text>

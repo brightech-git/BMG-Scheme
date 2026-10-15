@@ -39,8 +39,8 @@ function GoldPlan({
       ? schemeImagesById[schemeId]
       : defaultImage;                   // 3️⃣ final fallback image
 
-      // console.log("Final image source:", finalImage);
-      
+
+
   const handleJoinScheme = () => {
     navigation.navigate("AddNewMember", {
       schemeId,
@@ -67,7 +67,7 @@ const handleKnowMore = () => {
       <ImageBackground
         source={finalImage}                 // ✅ Correct image applied
         style={styles.imageBackground}
-        
+
         resizeMode="contain"
       />
 

@@ -37,10 +37,10 @@ export default function EmailFormPage() {
     title: ""
   });
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  
+
   const fadeAnim = useState(new Animated.Value(0))[0];
   const slideAnim = useState(new Animated.Value(-100))[0];
-  
+
   const scrollViewRef = useRef(null);
   const messageInputRef = useRef(null);
   const subjectInputRef = useRef(null);
@@ -69,11 +69,11 @@ export default function EmailFormPage() {
 
   const showToast = (title, message, type = "info") => {
     setToast({ visible: true, message, type, title });
-    
+
     // Reset animations
     fadeAnim.setValue(0);
     slideAnim.setValue(-100);
-    
+
     // Slide in and fade in
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -118,9 +118,9 @@ export default function EmailFormPage() {
   const handleSend = async () => {
     // Dismiss keyboard first to ensure button press is registered
     dismissKeyboard();
-    
+
     if (isSubmitting) return;
-    
+
     if (!name || !email || !subject || !message) {
       showToast("Validation Error", "Please fill all fields", "error");
       return;
@@ -158,17 +158,16 @@ export default function EmailFormPage() {
       );
 
       const data = await response.text();
-      console.log("Response Data:", data);
-      
+
       if (response.ok) {
         showToast("Success", data || "Your inquiry has been sent successfully!", "success");
-        
+
         // Clear form
         setName("");
         setEmail("");
         setSubject("");
         setMessage("");
-        
+
         // Wait for toast to show, then navigate back after 2 seconds
         setTimeout(() => {
           navigation.goBack();
@@ -178,7 +177,7 @@ export default function EmailFormPage() {
         setIsSubmitting(false);
       }
     } catch (error) {
-      console.log("API Error:", error);
+      console.error("API Error:", error);
       showToast("Network Error", "Unable to connect to the server. Please check your connection.", "error");
       setIsSubmitting(false);
     }

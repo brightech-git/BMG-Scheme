@@ -32,7 +32,7 @@ function ProfileContainer(props) {
           // Format the phone number for display
           const formattedPhone = phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
           setUserPhone(formattedPhone);
-          
+
           // Fetch user details using phone number
           const response = await fetch(`${API_BASE_URL_OLD}/account/phonesearch?phoneNo=${phoneNumber}`, {
             method: 'GET',
@@ -64,7 +64,7 @@ function ProfileContainer(props) {
       [
         {
           text: 'Cancel',
-          onPress: () => console.log('Logout canceled'),
+          onPress: () => {},
           style: 'cancel',
         },
         {
@@ -139,7 +139,7 @@ function ProfileContainer(props) {
             <TextDefault style={styles.settingsTitle} H4>
               Account Settings
             </TextDefault>
-            
+
             {[ 
               { label: 'My Scheme', icon: 'list', route: 'MyScheme' },
               { label: 'Help Center', icon: 'help-center', route: 'HelpCenter' },

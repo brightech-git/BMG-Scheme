@@ -70,7 +70,7 @@ const SETTINGS_ITEMS = [
 const DrawerMenu = ({ isVisible, onClose }) => {
   const navigation = useNavigation();
   const route = useRoute();
-  
+
   // State
   const [userData, setUserData] = useState({});
   const [uploading, setUploading] = useState(false);
@@ -78,7 +78,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
   const [selectedImagePreview, setSelectedImagePreview] = useState(null);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // Refs
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,15 +89,15 @@ const DrawerMenu = ({ isVisible, onClose }) => {
 
   // Memoized values
   const activeRoute = useMemo(() => route.name, [route.name]);
-  
+
   const isActive = useCallback((routeName) => activeRoute === routeName, [activeRoute]);
 
   // API Functions
   const fetchUserDataFromAPI = useCallback(async () => {
     if (loading) return;
-    
+
     setLoading(true);
-    
+
     try {
       abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
@@ -120,7 +120,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
 
       const apiUserData = await response.json();
       const storedProfilePic = await AsyncStorage.getItem("userProfilePicture");
-      
+
       const mergedData = {
         ...apiUserData,
         username: apiUserData.username,
@@ -131,18 +131,17 @@ const DrawerMenu = ({ isVisible, onClose }) => {
 
       setUserData(mergedData);
       await saveUserData(mergedData);
-      
+
       if (storedProfilePic) {
         await AsyncStorage.setItem("userProfilePicture", storedProfilePic);
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Fetch aborted');
         return;
       }
-      
+
       console.error("Fetch user data error:", error);
-      
+
       // Fallback to stored data
       try {
         const storedData = await getUserData();
@@ -150,7 +149,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
       } catch (storageError) {
         console.error("Storage fallback error:", storageError);
       }
-      
+
       if (error.name !== "AbortError") {
         Alert.alert(
           "Network Error",
@@ -170,12 +169,12 @@ const DrawerMenu = ({ isVisible, onClose }) => {
         const storedData = await getUserData();
         if (storedData) {
           setUserData(storedData);
-          
+
           const storedProfilePic = await AsyncStorage.getItem("userProfilePicture");
           if (storedProfilePic && !storedData.picture) {
             setUserData(prev => ({ ...prev, picture: storedProfilePic }));
           }
-          
+
           // Debounced API fetch
           setTimeout(fetchUserDataFromAPI, 500);
         }
@@ -183,9 +182,9 @@ const DrawerMenu = ({ isVisible, onClose }) => {
         console.error("Error fetching initial user data:", error);
       }
     };
-    
+
     fetchInitialData();
-    
+
     return () => {
       abortControllerRef.current?.abort();
     };
@@ -199,7 +198,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
   useEffect(() => {
     if (isVisible) {
       fetchUserDataFromAPI();
-      
+
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -260,7 +259,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
   useEffect(() => {
     const verifyVersion = async () => {
       const result = await checkForUpdate("com.bmg.bmgscheme");
-      
+
       if (result.isUpdateAvailable) {
         Alert.alert(
           "Update Available",
@@ -279,7 +278,7 @@ const DrawerMenu = ({ isVisible, onClose }) => {
         );
       }
     };
-    
+
     verifyVersion();
   }, []);
 
@@ -337,7 +336,7 @@ const pickImageFromGallery = useCallback(async () => {
   const takePhotoWithCamera = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      
+
       if (status !== "granted") {
         Alert.alert("Permission Required", "We need camera permission to take a photo.");
         return;
@@ -360,7 +359,7 @@ const pickImageFromGallery = useCallback(async () => {
 
   const uploadProfilePicture = useCallback(async (imageAsset) => {
     setUploading(true);
-    
+
     try {
       const image = {
         uri: imageAsset.uri,
@@ -369,10 +368,10 @@ const pickImageFromGallery = useCallback(async () => {
       };
 
       const response = await memberPhotoService.uploadPhoto(image);
-      
+
       if (response.photoPath) {
         let fullImageUrl;
-        
+
         if (response.photoPath.startsWith('http')) {
           fullImageUrl = response.photoPath;
         } else if (response.photoPath.startsWith('/')) {
@@ -380,10 +379,10 @@ const pickImageFromGallery = useCallback(async () => {
         } else {
           fullImageUrl = `${IMAGE_BASE_URL}/uploads/${response.photoPath}`;
         }
-        
+
         setUserData(prev => ({ ...prev, picture: fullImageUrl }));
         await AsyncStorage.setItem("userProfilePicture", fullImageUrl);
-        
+
         Alert.alert("Success", response.message || "Profile picture updated successfully!");
       } else {
         Alert.alert("Warning", "Upload completed but no photo path returned.");
@@ -443,7 +442,7 @@ const pickImageFromGallery = useCallback(async () => {
       }] : []),
       { text: "Cancel", style: "cancel" },
     ];
-    
+
     Alert.alert("Update Profile Picture", "Choose an option", options);
   }, [userData.picture, takePhotoWithCamera, pickImageFromGallery, deleteProfilePicture]);
 
@@ -486,16 +485,16 @@ const pickImageFromGallery = useCallback(async () => {
   const handleRateUs = useCallback(async () => {
     const androidUrl = "market://details?id=com.bmg.bmgscheme";
     const webUrl = "https://play.google.com/store/apps/details?id=com.bmg.bmgscheme";
-    
+
     try {
       if (Platform.OS === "android") {
         const canOpen = await Linking.canOpenURL(androidUrl);
         if (canOpen) return Linking.openURL(androidUrl);
       }
-      
+
       const canOpenWeb = await Linking.canOpenURL(webUrl);
       if (canOpenWeb) return Linking.openURL(webUrl);
-      
+
       Alert.alert("Can't open store", "Unable to open the store URL.");
     } catch (err) {
       console.error("RateUs error", err);
@@ -517,7 +516,7 @@ const pickImageFromGallery = useCallback(async () => {
   // Render helpers
   const renderMenuItem = useCallback((item, index) => {
     const active = isActive(item.route);
-    
+
     return (
       <TouchableOpacity
         key={`menu-${index}`}
@@ -611,7 +610,7 @@ const pickImageFromGallery = useCallback(async () => {
                     color={COLORS.white}
                   />
                 </Pressable>
-                
+
                 <Pressable
                   onPress={fetchUserDataFromAPI}
                   style={({ pressed }) => [styles.refreshButton, pressed && styles.buttonPressed]}
@@ -666,13 +665,13 @@ const pickImageFromGallery = useCallback(async () => {
                 <TextDefault style={styles.welcomeText}>
                   {loading ? "Loading..." : `Welcome, ${userData.username || "User"}`}
                 </TextDefault>
-                
+
                 {userData.contactNumber && (
                   <TextDefault style={styles.phoneText}>
                     {userData.contactNumber}
                   </TextDefault>
                 )}
-                
+
               </Animated.View>
             </LinearGradient>
 
@@ -741,7 +740,7 @@ const pickImageFromGallery = useCallback(async () => {
                   Version {Application.nativeApplicationVersion}
                 </TextDefault>
               </View>
-              
+
               <View style={styles.spacerLarge} />
             </ScrollView>
           </SafeAreaView>
@@ -758,7 +757,7 @@ const pickImageFromGallery = useCallback(async () => {
           <View style={styles.previewModalContainer}>
             <View style={styles.previewModalContent}>
               <Text style={styles.previewTitle}>Profile Picture Preview</Text>
-              
+
               {selectedImagePreview && (
                 <Image
                   source={{ uri: selectedImagePreview.uri }}
@@ -766,7 +765,7 @@ const pickImageFromGallery = useCallback(async () => {
                   resizeMode="contain"
                 />
               )}
-              
+
               <View style={styles.previewButtonsContainer}>
                 <TouchableOpacity
                   style={[styles.previewButton, styles.cancelButton]}
@@ -777,7 +776,7 @@ const pickImageFromGallery = useCallback(async () => {
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.previewButton, styles.useButton]}
                   onPress={handleUseImage}
@@ -802,7 +801,7 @@ const styles = StyleSheet.create({
   overlayTouchable: {
     flex: 1,
   },
-  
+
   // Drawer
   drawer: {
     position: "absolute",
@@ -818,7 +817,7 @@ const styles = StyleSheet.create({
   drawerContent: {
     flex: 1,
   },
-  
+
   // ScrollView
   scrollView: {
     flex: 1,
@@ -827,7 +826,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 20,
   },
-  
+
   // Header
   headerContainer: {
     paddingBottom: SIZES.padding.md,
@@ -852,7 +851,7 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.6,
   },
-  
+
   // Profile
   profileHeader: {
     paddingHorizontal: SIZES.padding.lg,
@@ -916,7 +915,7 @@ const styles = StyleSheet.create({
     marginLeft: SIZES.xs,
     fontWeight: "600",
   },
-  
+
   // Menu Items
   menuItem: {
     paddingVertical: SIZES.padding.lg,
@@ -943,7 +942,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: COLORS.error,
   },
-  
+
   // Settings
   settingsContainer: {
     borderBottomColor: "rgba(0,0,0,0.04)",
@@ -974,7 +973,7 @@ const styles = StyleSheet.create({
     ...FONTS.body,
     color: COLORS.textPrimary,
   },
-  
+
   // Spacers
   spacerSmall: {
     height: 8,
@@ -982,7 +981,7 @@ const styles = StyleSheet.create({
   spacerLarge: {
     height: 20,
   },
-  
+
   // Footer
   footer: {
     marginTop: SIZES.padding.lg,
@@ -994,7 +993,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SIZES.padding.md,
   },
-  
+
   // Preview Modal
   previewModalContainer: {
     flex: 1,

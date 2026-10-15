@@ -130,8 +130,10 @@ const ReceiptPreviewModal = ({
     }
   };
 
+  const val = (v) => (v && v !== "N/A" && String(v).trim() !== "" ? String(v).trim() : null);
+
   const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return null;
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-GB", {
@@ -140,7 +142,7 @@ const ReceiptPreviewModal = ({
         year: "numeric",
       });
     } catch {
-      return "Invalid Date";
+      return null;
     }
   };
 
@@ -233,22 +235,18 @@ const ReceiptPreviewModal = ({
                 {/* Left Section - Company Info */}
                 <View style={styles.leftSection}>
                   <View style={styles.receiptInfo}>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Receipt Number : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.payment.receiptNo ||
-                          payment.receiptNo ||
-                          "N/A"}
+                    {val(previewData.payment.receiptNo || payment.receiptNo) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Receipt Number : </Text>
+                        <Text style={styles.infoValue}>{val(previewData.payment.receiptNo || payment.receiptNo)}</Text>
                       </Text>
-                    </Text>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Receipt Date : </Text>
-                      <Text style={styles.infoValue}>
-                        {formatDate(
-                          previewData.payment.updateTime || payment.updateTime
-                        )}
+                    )}
+                    {formatDate(previewData.payment.updateTime || payment.updateTime) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Receipt Date : </Text>
+                        <Text style={styles.infoValue}>{formatDate(previewData.payment.updateTime || payment.updateTime)}</Text>
                       </Text>
-                    </Text>
+                    )}
                   </View>
 
                   <View style={styles.companySection}>
@@ -302,55 +300,42 @@ const ReceiptPreviewModal = ({
                 {/* Right Section - Customer Info */}
                 <View style={styles.rightSection}>
                   <View style={styles.customerAddress}>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Name : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.customerInfo.customerName ||
-                          customerInfo?.customerName ||
-                          "N/A"}
+                    {val(previewData.customerInfo.customerName || customerInfo?.customerName) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Name : </Text>
+                        <Text style={styles.infoValue}>{val(previewData.customerInfo.customerName || customerInfo?.customerName)}</Text>
                       </Text>
-                    </Text>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Mobile : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.customerInfo.mobile ||
-                          customerInfo?.mobile ||
-                          "N/A"}
+                    )}
+                    {val(previewData.customerInfo.mobile || customerInfo?.mobile) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Mobile : </Text>
+                        <Text style={styles.infoValue}>{val(previewData.customerInfo.mobile || customerInfo?.mobile)}</Text>
                       </Text>
-                    </Text>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Transaction ID : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.payment.transactionId ||
-                          payment.transactionId ||
-                          payment.receiptNo ||
-                          "N/A"}
+                    )}
+                    {val(previewData.payment.transactionId || payment.transactionId || payment.receiptNo) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Transaction ID : </Text>
+                        <Text style={styles.infoValue}>{val(previewData.payment.transactionId || payment.transactionId || payment.receiptNo)}</Text>
                       </Text>
-                    </Text>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Payment Mode : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.payment.paymentMode ||
-                          payment.chqBank ||
-                          payment.paymentMode ||
-                          "Cash"}
-                        {previewData.payment.paymentSubMode
-                          ? ` - ${previewData.payment.paymentSubMode}`
-                          : ""}
+                    )}
+                    {val(previewData.payment.paymentMode || payment.chqBank || payment.paymentMode) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Payment Mode : </Text>
+                        <Text style={styles.infoValue}>
+                          {val(previewData.payment.paymentMode || payment.chqBank || payment.paymentMode)}
+                          {val(previewData.payment.paymentSubMode) ? ` - ${val(previewData.payment.paymentSubMode)}` : ""}
+                        </Text>
                       </Text>
-                    </Text>
-                    <Text style={styles.infoRow}>
-                      <Text style={styles.label}>Address : </Text>
-                      <Text style={styles.infoValue}>
-                        {previewData.customerInfo.address1 ||
-                          customerInfo?.address1 ||
-                          "N/A"}
-                          
-                        {previewData.customerInfo.address2
-                          ? `, ${previewData.customerInfo.address2}`
-                          : ""}
+                    )}
+                    {val(previewData.customerInfo.address1 || customerInfo?.address1) && (
+                      <Text style={styles.infoRow}>
+                        <Text style={styles.label}>Address : </Text>
+                        <Text style={styles.infoValue}>
+                          {val(previewData.customerInfo.address1 || customerInfo?.address1)}
+                          {val(previewData.customerInfo.address2) ? `, ${val(previewData.customerInfo.address2)}` : ""}
+                        </Text>
                       </Text>
-                    </Text>
+                    )}
                   </View>
                 </View>
               </View>

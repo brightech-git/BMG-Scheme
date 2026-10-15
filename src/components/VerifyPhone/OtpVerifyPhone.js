@@ -168,17 +168,14 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
       if (Platform.OS === "android") {
         const hashCodes = await getHash();
         setAppHash(hashCodes);
-        console.log("📲 Android hashKey:", hashCodes);
       }
 
       if (startListener) {
         startListener();
         setWaitingForOtp(true);
         setShowFullScreenLoader(true);
-        console.log("✅ SMS listener started successfully");
 
         const timeout = setTimeout(() => {
-          console.log("⏰ Auto OTP detection timeout (45s)");
           setWaitingForOtp(false);
           setShowFullScreenLoader(false);
           showToast("You can enter OTP manually");
@@ -187,7 +184,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
 
         setAutoOtpTimeout(timeout);
       } else {
-        console.log("❌ startListener not available");
         setWaitingForOtp(false);
         setShowFullScreenLoader(false);
       }
@@ -202,11 +198,9 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
   // ------------------- DETECT OTP FROM MESSAGE -------------------
   useEffect(() => {
     if (message && waitingForOtp) {
-      console.log("📨 SMS message received:", message);
-      
+
       // Clean the message - remove special characters and extra spaces
       const cleanMessage = message.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ');
-      console.log("🧹 Cleaned message:", cleanMessage);
 
       // Enhanced OTP patterns for BMG Jewellers format
       const patterns = [
@@ -228,7 +222,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         const match = cleanMessage.match(pattern);
         if (match && match[1]) {
           detectedOtp = match[1];
-          console.log("✅ Detected OTP with pattern:", pattern, "OTP:", detectedOtp);
           break;
         }
       }
@@ -238,12 +231,10 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         const sixDigitMatch = cleanMessage.match(/\b\d{6}\b/);
         if (sixDigitMatch) {
           detectedOtp = sixDigitMatch[0];
-          console.log("🔍 Fallback OTP detection:", detectedOtp);
         }
       }
 
       if (detectedOtp) {
-        console.log("🎯 Final detected OTP:", detectedOtp);
 
         if (autoOtpTimeout) {
           clearTimeout(autoOtpTimeout);
@@ -253,32 +244,28 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         setWaitingForOtp(false);
         setShowFullScreenLoader(false);
         setOtpMessage("OTP detected automatically ✓");
-        
+
         // Stop listener immediately
         try {
           stopListener && stopListener();
           removeListener();
         } catch (e) {
-          console.log("Listener cleanup:", e);
         }
 
         // Auto-verify after a short delay
         setTimeout(() => {
-          console.log("🚀 Auto-verifying OTP:", detectedOtp);
           handleVerifyOtp(detectedOtp);
         }, 1000);
-        
+
         return;
       }
 
-      console.log("❌ No OTP detected in message");
     }
   }, [message, waitingForOtp]);
 
   // ------------------- TIMEOUT HANDLER -------------------
   useEffect(() => {
     if (timeoutError && waitingForOtp) {
-      console.log("⏰ OTP detection timeout from hook");
       showToast("OTP detection timeout. Please enter manually.");
       setWaitingForOtp(false);
       setShowFullScreenLoader(false);
@@ -302,7 +289,7 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
     try {
       // Generate OTP
       const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Store phone and OTP
       await AsyncStorage.setItem("pendingPhone", phoneNumber);
       await AsyncStorage.setItem("otp", newOtp);
@@ -315,7 +302,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
 
       // Updated SMS template with your format
       const smsMessage = `BMG JEWELLERS PRIVATE LIMITED: Your OTP for login is ${newOtp}. Please enter this code in the app to continue. This OTP is valid for 10 minutes. Do not share it with anyone. ${appHash}`;
-  console.log("smsmessage", smsMessage);
       // Text Speed API parameters
       const params = {
         apikey: SMS_CONFIG.authKey,
@@ -329,7 +315,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join("&");
 
-      console.log("📤 Sending OTP via Text Speed:", { ...params, message: smsMessage });
 
       const response = await fetch(SMS_CONFIG.url, {
         method: "POST",
@@ -340,7 +325,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
       });
 
       const result = await response.text();
-      console.log("📤 Text Speed API response:", result);
 
       if (response.ok) {
         showToast("OTP sent successfully ✓");
@@ -377,7 +361,7 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
     if (resendTimer > 0) return;
 
     setLoading(true);
-    
+
     try {
       const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
       await AsyncStorage.setItem("otp", newOtp);
@@ -393,7 +377,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
 
       // Updated SMS template for resend
       const smsMessage = `BMG JEWELLERS PRIVATE LIMITED: Your OTP for login is ${newOtp}. Please enter this code in the app to continue. This OTP is valid for 10 minutes. Do not share it with anyone. ${appHash}`;
-      console.log("smsmessage", smsMessage);
       // Text Speed API parameters for resend
       const params = {
         apikey: SMS_CONFIG.authKey,
@@ -414,7 +397,6 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
       });
 
       const result = await response.text();
-      console.log("📤 Resend OTP response:", result);
 
       if (response.ok) {
         showToast("OTP resent successfully ✓");
@@ -462,22 +444,20 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         return;
       }
 
-      console.log("🔍 Verifying OTP:", { entered: otpVal, stored: storedOtp });
 
       // Simple OTP verification
       if (otpVal === storedOtp) {
         showToast("OTP verified successfully ✓");
         await AsyncStorage.setItem("verifiedPhone", storedPhone);
         await AsyncStorage.removeItem("otp"); // Clear OTP after verification
-        
+
         // Clean up listeners
         try {
           stopListener && stopListener();
           removeListener();
         } catch (e) {
-          console.log("Listener cleanup during verification:", e);
         }
-        
+
         if (autoOtpTimeout) {
           clearTimeout(autoOtpTimeout);
         }
@@ -507,15 +487,14 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
     setShowOtpInput(false);
     setWaitingForOtp(false);
     setShowFullScreenLoader(false);
-    
+
     // Clean up listeners
     try {
       stopListener && stopListener();
       removeListener();
     } catch (e) {
-      console.log("Listener cleanup during reset:", e);
     }
-    
+
     if (autoOtpTimeout) {
       clearTimeout(autoOtpTimeout);
     }
@@ -526,20 +505,19 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
     // Only allow numbers
     const numericText = text.replace(/[^0-9]/g, '');
     setEnteredOtp(numericText);
-    
+
     if (waitingForOtp && numericText.length > 0) {
       setWaitingForOtp(false);
       setShowFullScreenLoader(false);
       if (autoOtpTimeout) {
         clearTimeout(autoOtpTimeout);
       }
-      
+
       // Clean up listeners when user starts manual entry
       try {
         stopListener && stopListener();
         removeListener();
       } catch (e) {
-        console.log("Listener cleanup during manual entry:", e);
       }
     }
   };

@@ -19,7 +19,6 @@ export async function sendJoinSchemeNotification(schemeId, amount, schemeName) {
     const userId = await AsyncStorage.getItem("userId");
     const scheduledTime = getISTTimeISO();
 
-    console.log("scheduledTime", scheduledTime);
 
     if (!userId) {
       console.error("User ID not found in AsyncStorage");
@@ -92,7 +91,6 @@ export async function sendJoinSchemeNotification(schemeId, amount, schemeName) {
       return null;
     }
 
-    console.log("🔔 Join Scheme Notification sent:", data);
 
     // 🍀 Toast on success
     showMessage({

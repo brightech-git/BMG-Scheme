@@ -427,10 +427,6 @@ const SchemeListPage = ({ route, navigation }) => {
                 remainingDays: scheme.remainingDays || 0,
               };
 
-              console.log(
-                "Sending redemption data:",
-                JSON.stringify(redemptionPayload, null, 2),
-              );
 
               // Call redemption service
               const result = await sendRedemption(redemptionPayload);

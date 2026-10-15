@@ -25,7 +25,6 @@ function HelpCenterPage() {
   const navigation = useNavigation();
 
   const [companyInfo, setCompanyInfo] = React.useState(null);
-  console.log(companyInfo, "companyInfo");
 
   // const [clickOpen , setClickOpen] = React.useState(false);
   // const [openedType, setOpenedType] = React.useState(null);
@@ -47,7 +46,6 @@ function HelpCenterPage() {
   const handlePhoneCall = async (phoneNumber) => {
     const cleaned = cleanPhoneNumber(phoneNumber);
     const url = `tel:${cleaned}`;
-    console.log("Calling URL:", url);
     await Linking.openURL(url);
   };
 
@@ -165,8 +163,8 @@ function HelpCenterPage() {
 
             {/* Row 3 */}
             {/* <View style={styles.quickContainerRow}>
-              
-             
+
+
             </View> */}
           </View>
 
@@ -176,7 +174,7 @@ function HelpCenterPage() {
               title="Phone Numbers" 
               iconBg={COLORS.primary}
             >
-              
+
               <ContactItem
                 text={companyInfo?.cPhone}
                 icon="call"
@@ -246,7 +244,7 @@ function HelpCenterPage() {
                 text="Contact Support"
                 onPress={() => handlePhoneCall(companyInfo.cPhone)}
               />
-              
+
             </View>
           </View> */}
         </ScrollView>

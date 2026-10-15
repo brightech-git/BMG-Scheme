@@ -157,7 +157,6 @@ function LoginPage({ route }) {
       const response = await userService.googleLogin(payload);
 
       if (response.success && response.data) {
-        console.log("✅ Google Login Success:", response.data);
 
         const { id, email, username, message, contactNumber } = response.data;
 
@@ -204,7 +203,6 @@ function LoginPage({ route }) {
       });
 
       if (res.success && res.data?.token) {
-        console.log("✅ Login Success:", res.data);
 
         const normalizedData = {
           ...res.data,
@@ -359,7 +357,7 @@ function LoginPage({ route }) {
                   onPress={handleGoogleSignIn}
                   disabled={googleLoading}
                 >
-                  
+
                   {googleLoading ? (
                     <ActivityIndicator color={COLORS.primary} />
                   ) : (

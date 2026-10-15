@@ -162,7 +162,6 @@ export default function ResetMpinScreen() {
       // Call the reset MPIN API with old MPIN
       const response = await resetMpinWithOldApi(oldMpin, newMpin);
 
-      console.log("API Response:", response);
 
       // Check if response indicates success
       if (

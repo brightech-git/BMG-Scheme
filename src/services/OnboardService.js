@@ -14,7 +14,6 @@ export const bannerService = {
       const data = await response.json();
       const banners = data.banners || [];
 
-      console.log("Fetched scheme banners:", banners.length);
 
       return banners.map((banner) => ({
         id: banner.BannerId,

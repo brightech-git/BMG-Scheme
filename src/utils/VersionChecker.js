@@ -20,7 +20,6 @@ const isVersionLower = (current, target) => {
 export const checkForAppUpdate = async () => {
   try {
     const localVersion = Application.nativeApplicationVersion;
-    console.log("Installed version:", localVersion);
 
     /* ----------------------------------
        1️⃣ OTA UPDATE (ONLY IN PROD)
@@ -28,7 +27,6 @@ export const checkForAppUpdate = async () => {
     if (!__DEV__ && Updates.isEnabled) {
       const otaUpdate = await Updates.checkForUpdateAsync();
       if (otaUpdate.isAvailable) {
-        console.log("OTA update available, fetching...");
         await Updates.fetchUpdateAsync();
         await Updates.reloadAsync();
         return;
@@ -57,7 +55,6 @@ const response = await fetch(
 
     if (Platform.OS === "android") {
       const { latestVersion, playStoreUrl } = config.android;
-      console.log("Latest version:", latestVersion);
 
       // ✨ OPTIONAL UPDATE ONLY
       if (isVersionLower(localVersion, latestVersion)) {
@@ -73,10 +70,9 @@ const response = await fetch(
           ]
         );
       } else {
-        console.log("App is up to date. Installed:", localVersion);
       }
     }
   } catch (error) {
-    console.log("Version check failed:", error.message || error);
+    console.error("Version check failed:", error.message || error);
   }
 };

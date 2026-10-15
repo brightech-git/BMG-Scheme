@@ -71,7 +71,6 @@ useEffect(() => {
       const isMpinCreated = await AsyncStorage.getItem("isMpinCreated");
       const authToken = await AsyncStorage.getItem("authToken");
 
-      console.log("🟩 Storage Values:", { hasSeenOnboarding, isMpinCreated, authToken: !!authToken });
 
       if (!hasSeenOnboarding) {
         setInitialRoute("OnboardingScreen");

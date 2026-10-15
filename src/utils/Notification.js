@@ -71,7 +71,6 @@ export async function sendPushTokenToServer(fcmToken, userId) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    console.log("📤 FCM token sent to server:", payload);
     return res.ok;
   } catch (err) {
     console.error("❌ Token send failed:", err);
@@ -106,12 +105,10 @@ export async function registerForPushNotifications(userId) {
     }
 
     const fcmToken = await getToken(fcm);
-    console.log("📨 FCM Token:", fcmToken);
 
     if (userId) await sendPushTokenToServer(fcmToken, userId);
 
     onTokenRefresh(fcm, async (newToken) => {
-      console.log("🔄 FCM token refreshed:", newToken);
       if (userId) await sendPushTokenToServer(newToken, userId);
     });
 
@@ -143,7 +140,6 @@ export function listenForNotifications(navigation) {
 export async function checkInitialNotification(navigation) {
   const remoteMessage = await getInitialNotification(fcm);
   if (remoteMessage) {
-    console.log("🚀 App opened from closed state:", remoteMessage);
     handleNavigation(navigation, remoteMessage.data);
   }
 

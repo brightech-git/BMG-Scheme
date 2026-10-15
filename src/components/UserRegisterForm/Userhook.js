@@ -93,7 +93,6 @@ export const useUserProfile = () => {
   const mergeUserDataToStorage = async (newData) => {
     try {
       await updateUserData(newData);
-      console.log("✅ Profile data merged, token preserved");
     } catch (e) {
       console.error("❌ Failed to merge user data:", e);
     }
@@ -128,7 +127,6 @@ export const useUserProfile = () => {
     updateState({ isFetchingData: true });
 
     try {
-      console.log("🌐 Fetching user data...");
 
       const result = await userService.fetchUserData(userId);
 
@@ -136,25 +134,24 @@ export const useUserProfile = () => {
         // IMPORTANT: Merge with existing token from local storage
         const existingData = await getUserData();
         const existingToken = existingData?.token;
-        
+
         const mergedData = {
           ...result,
           token: existingToken || result.token, // Preserve existing token
         };
-        
+
         await updateUserData(mergedData);
-        
+
         updateState({ userData: mergedData });
         setFormData(userService.getInitialFormState(mergedData));
-        console.log("✅ User data fetched and updated successfully");
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
-      
+
       // Fall back to local data
       const localData = await getUserData();
       if (localData) {
-        console.log("⚠️ Using local data due to fetch error");
+        console.error("⚠️ Using local data due to fetch error");
         updateState({ userData: localData });
         setFormData(userService.getInitialFormState(localData));
       } else {
@@ -258,14 +255,14 @@ export const useUserProfile = () => {
 
     // Apply field-specific formatting for other fields
     let processedValue = value;
-    
+
     if (field === "pincode") {
       processedValue = value.replace(/[^0-9]/g, "").slice(0, 6);
-      
+
       // Update form data FIRST with a callback to ensure we have the updated value
       setFormData((prev) => {
         const updatedFormData = { ...prev, [field]: processedValue };
-        
+
         // If we have a complete 6-digit pincode, fetch city/state
         if (processedValue.length === 6) {
           // Use setTimeout to ensure state update is complete before fetching
@@ -273,10 +270,10 @@ export const useUserProfile = () => {
             fetchCityStateFromPincode(processedValue);
           }, 0);
         }
-        
+
         return updatedFormData;
       });
-      
+
       // Don't return here - let the rest of the function handle validation and errors
     } else if (field === "contactNumber") {
       processedValue = value.replace(/[^0-9]/g, "").slice(0, 10);
@@ -399,7 +396,6 @@ export const useUserProfile = () => {
 
     try {
       const aadhaarNumber = formData.idProofNo;
-      console.log("Starting Aadhaar verification (DigiLocker)");
 
       const result = await digiLockerService.verifyAadhaar(
         state.userId,
@@ -447,22 +443,21 @@ export const useUserProfile = () => {
       const response = await fetch(
         `https://api.postalpincode.in/pincode/${pincode}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data[0]?.Status === "Success" && data[0].PostOffice?.length > 0) {
         // Get the first post office entry
         const postOffice = data[0].PostOffice[0];
         const district = postOffice.District || "";
         const state = postOffice.State || "";
         const country = postOffice.Country || "India";
-        
-        console.log(`📍 Pincode ${pincode} resolved to: District=${district}, State=${state}`);
-        
+
+
         // Update form data with the fetched city and state
         setFormData((prev) => ({
           ...prev,
@@ -487,7 +482,7 @@ export const useUserProfile = () => {
             pincode: true,
           },
         }));
-        
+
         return {
           success: true,
           city: district,
@@ -502,7 +497,7 @@ export const useUserProfile = () => {
           ...prev,
           pincode: errorMessage,
         }));
-        
+
         // Clear city and state fields
         setFormData((prev) => ({
           ...prev,
@@ -510,7 +505,7 @@ export const useUserProfile = () => {
           state: "",
           country: "India",
         }));
-        
+
         return {
           success: false,
           message: errorMessage,
@@ -518,17 +513,17 @@ export const useUserProfile = () => {
       }
     } catch (error) {
       console.error("Pincode fetch error:", error);
-      
+
       let errorMessage = "Network error. Please try again.";
       if (error.message.includes("Failed to fetch")) {
         errorMessage = "Unable to connect to service. Check your internet connection.";
       }
-      
+
       setErrors((prev) => ({
         ...prev,
         pincode: errorMessage,
       }));
-      
+
       return {
         success: false,
         message: errorMessage,
@@ -541,12 +536,6 @@ export const useUserProfile = () => {
 
   // ===== UPDATED VERIFICATION COMPLETE HANDLER =====
   const handleVerificationComplete = async (result) => {
-    console.log(
-      "Verification completed. success:",
-      result?.success,
-      "| verified:",
-      result?.aadhaarVerified
-    );
 
     if (result.success && result.aadhaarVerified) {
       try {
@@ -608,14 +597,14 @@ export const useUserProfile = () => {
         // If we have pincode from Aadhaar, fetch city and state
         const pincodeFromAadhaar = addressData?.pincode || 
                                     documentData.split_address?.pincode;
-        
+
         let cityStateFromPincode = { city: "", state: "" };
-        
+
         if (pincodeFromAadhaar && pincodeFromAadhaar.length === 6) {
           try {
             // Use the pincode API to get city (district) and state
             const pincodeResult = await fetchCityStateFromPincode(pincodeFromAadhaar);
-            
+
             if (pincodeResult.success) {
               cityStateFromPincode = {
                 city: pincodeResult.city || addressData?.city || formData.city,
@@ -656,7 +645,7 @@ export const useUserProfile = () => {
         };
 
         setFormData(updatedFormData);
-        
+
         // Update validation state
         const fieldValidityUpdates = {
           idProofNo: true,
@@ -665,14 +654,14 @@ export const useUserProfile = () => {
           state: updatedFormData.state ? true : false,
           pincode: updatedFormData.pincode ? true : false,
         };
-        
+
         updateState((prev) => ({
           fieldValidity: {
             ...prev.fieldValidity,
             ...fieldValidityUpdates,
           },
         }));
-        
+
         // Clear errors
         const clearedErrors = {};
         Object.keys(fieldValidityUpdates).forEach(key => {
@@ -687,7 +676,6 @@ export const useUserProfile = () => {
 
         // First, update local storage with all the data
         await updateUserData(updatedFormData);
-        console.log("✅ Aadhaar data saved to local storage");
 
         // Then send to server
         try {
@@ -712,20 +700,16 @@ export const useUserProfile = () => {
             country: updatedFormData.country,
           };
 
-          console.log("📤 Sending Aadhaar verification update to server");
           const serverResult = await userService.updateUserData(state.userId, serverApiData);
-          console.log("📥 Server Aadhaar update status:", serverResult?.status);
 
           // If server update was successful, wait a moment and then refresh
           if (serverResult.status === "success") {
-            console.log("✅ Server update successful, refreshing data...");
-            
+
             // Wait a moment for server to process
             setTimeout(async () => {
               try {
                 await fetchUserData(state.userId);
               } catch (fetchError) {
-                console.log("⚠️ Could not fetch updated data, but Aadhaar is verified");
               }
             }, 1000);
           }
@@ -811,10 +795,6 @@ export const useUserProfile = () => {
       Alert.alert("✅ Success", "Phone number verified successfully!");
 
       const token = await getAuthToken();
-      console.log(
-        "🔐 Final Token Status:",
-        token ? "✅ PRESERVED" : "❌ MISSING"
-      );
     } catch (error) {
       Alert.alert(
         "Verification Failed",
@@ -893,8 +873,7 @@ export const useUserProfile = () => {
   };
 
   const handleSubmit = async () => {
-    console.log("🚀 handleSubmit triggered");
-    
+
     // Terms & Conditions must always be explicitly accepted by the user
     if (!formData.termsAccepted) {
       Alert.alert(
@@ -948,17 +927,13 @@ export const useUserProfile = () => {
         aadhaarStatus: updatedFormData.aadhaarStatus || "pending",
       };
 
-      console.log("📤 Preparing to send data to server:", JSON.stringify(apiData, null, 2));
 
       const tokenBefore = await getAuthToken();
-      console.log("🔐 Token before update:", tokenBefore ? "Exists" : "Missing");
 
       // Call the API with properly typed data
       const result = await userService.updateUserData(state.userId, apiData);
-      console.log("📥 Server response:", result);
 
       if (result.otpSent === true) {
-        console.log("📱 OTP required for phone verification");
         updateState({
           phoneToVerify: updatedFormData.contactNumber,
           showOTPModal: true,
@@ -967,17 +942,15 @@ export const useUserProfile = () => {
       } else {
         // Update local storage with what we sent
         await updateUserData(apiData);
-        
+
         const tokenAfter = await getAuthToken();
-        console.log("🔐 Token after update:", tokenAfter ? "✅ PRESERVED" : "❌ LOST");
-        
+
         // Try to fetch updated data from server
         try {
           await fetchUserData(state.userId);
         } catch (fetchError) {
-          console.log("⚠️ Could not fetch updated data, but profile was saved");
         }
-        
+
         closeFormAndReset();
         Alert.alert("Success ✅", "Profile updated successfully!");
       }

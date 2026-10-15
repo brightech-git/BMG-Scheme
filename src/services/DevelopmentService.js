@@ -16,7 +16,7 @@ export const getAppStatus = async () => {
 
     const data = await response.json();
 
-    console.log("API Response:", data); // ✅ Log first
+    {} // ✅ Log first
     return data; // ✅ Then return
 
     /*

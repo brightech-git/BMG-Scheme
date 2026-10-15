@@ -237,9 +237,9 @@ const MemberDetailsPage = ({
       clearInterval(verificationPolling);
       setVerificationPolling(null);
     }
-    
+
     setShowDigiLockerWebView(false);
-    
+
     Alert.alert(
       "Verification Pending",
       "Your verification is being processed. Please wait a moment for the results.",
@@ -252,17 +252,17 @@ const MemberDetailsPage = ({
       "Check Verification",
       "Have you completed the verification in DigiLocker?",
       [
-        
+
         {
           text: "Cancel Verification",
           onPress: () => {
             setShowDigiLockerWebView(false);
-            
+
             if (verificationPolling) {
               clearInterval(verificationPolling);
               setVerificationPolling(null);
             }
-            
+
             setNomineeAadhaarStatus({
               isVerified: false,
               isVerifying: false,
@@ -270,13 +270,13 @@ const MemberDetailsPage = ({
               message: "",
               aadhaarData: null,
             });
-            
+
             setFormData(prev => ({
               ...prev,
               nomineeAadhaarVerified: false,
               nomineeAadhaarVerificationId: "",
             }));
-            
+
             Alert.alert(
               "Verification Cancelled",
               "You can try again or proceed with manual verification.",
@@ -354,7 +354,6 @@ const MemberDetailsPage = ({
         const currentUserId = await AsyncStorage.getItem("userId");
 
         if (!currentUserId) {
-          console.log("No userId available");
           Alert.alert(
             "Registration Required",
             "Please complete your KYC registration first.",
@@ -438,7 +437,7 @@ const MemberDetailsPage = ({
                   });
                 },
               }
-              
+
             ]
           );
           setApiLoading(false);
@@ -466,7 +465,7 @@ const MemberDetailsPage = ({
 
           setFormData((prev) => ({ ...prev, ...updatedForm }));
           setIsAadhaarValid(data.aadhaarVerified || false);
-          
+
           if (data.dateOfBirth) {
             const [year, month, day] = data.dateOfBirth.split("-");
             setSelectedDate({ day, month, year });
@@ -475,7 +474,7 @@ const MemberDetailsPage = ({
 
       } catch (error) {
         console.error("Error fetching user data:", error);
-        
+
         if (error.message.includes("Network request failed")) {
           Alert.alert(
             "Network Error",
@@ -1441,7 +1440,6 @@ const MemberDetailsPage = ({
 
       // Aadhaar - skip if already verified (API user) or masked value present
       const aadhaarAlreadyVerified = isAadhaarValid || userData?.aadhaarVerified || !!userData?.maskedAadhaar;
-      console.log("AADHAAR DEBUG:", { isAadhaarValid, aadhaarVerified: userData?.aadhaarVerified, maskedAadhaar: userData?.maskedAadhaar, aadharNumber: d.aadharNumber, aadhaarAlreadyVerified });
       if (!aadhaarAlreadyVerified) {
         const aadhaarErr = validateAadhaar(
           d.aadharNumber?.replace(/\s/g, "") || ""
@@ -1541,7 +1539,6 @@ const MemberDetailsPage = ({
         apiContactNumber: userData?.contactNumber,
       };
 
-      console.log("Transformed data for next step:", transformedData);
 
       if (onNext && typeof onNext === "function") {
         onNext(transformedData);
@@ -2269,7 +2266,7 @@ const MemberDetailsPage = ({
         }
       }}
     />
-    
+
     {/* Add the warning message */}
     <View style={styles.warningContainer}>
       <Text style={styles.warningText}>
@@ -2278,7 +2275,7 @@ const MemberDetailsPage = ({
         Nominee Aadhaar must be different from the registered user's Aadhaar.
       </Text>
     </View>
-    
+
     {digiLockerUrl ? (
       <WebView
         source={{ uri: digiLockerUrl }}

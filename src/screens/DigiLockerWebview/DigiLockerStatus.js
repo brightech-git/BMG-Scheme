@@ -13,7 +13,6 @@ export default function DigiLockerStatusScreen({ route }) {
       if (res.step === "SUCCESS") {
         clearInterval(timer);
         setStatus("Verified ✅");
-        console.log("Aadhaar Data:", res.data);
       } else {
         setStatus(res.status || "Pending...");
       }

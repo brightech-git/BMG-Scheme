@@ -10,7 +10,7 @@ const FixedDepositScheme = ({
   isSubmitting,
   inputRefs,
   setActiveInput,
-  minAmount = 0,
+  minAmount = 100,
 }) => {
   const amountRef = useRef(null);
 

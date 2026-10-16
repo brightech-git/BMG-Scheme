@@ -40,14 +40,14 @@ const BuyPage = () => {
   const navigation = useNavigation();
   const { productData, commamt } = route.params || {};
 
-  const [minAmount, setMinAmount] = useState(commamt ?? 0);
+  const [minAmount, setMinAmount] = useState(commamt ?? 100);
 
   useEffect(() => {
     getAllSchemes()
       .then((schemes) => {
         const schemeId = Number(productData?.schemeSummary?.schemeId);
         const match = schemes.find((s) => s.SchemeId === schemeId);
-        setMinAmount(match?.COMMAMT ?? 0);
+        setMinAmount(match?.COMMAMT ?? 100);
       })
       .catch(() => {});
   }, []);

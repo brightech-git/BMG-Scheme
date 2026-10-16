@@ -22,7 +22,7 @@ const DigiSilverScheme = ({
   numericSchemeId,
   inputRefs,
   setActiveInput,
-  minAmount = 0,
+  minAmount = 100,
 }) => {
   const [silverRate, setSilverRate] = useState(null);
   const [loadingSilverRate, setLoadingSilverRate] = useState(false);

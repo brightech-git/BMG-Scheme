@@ -10,7 +10,7 @@ const FixedDepositScheme = ({
   isSubmitting,
   inputRefs,
   setActiveInput,
-  minAmount = 10000, // Updated minimum amount to ₹10,000
+  minAmount = 0,
 }) => {
   const amountRef = useRef(null);
 

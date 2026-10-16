@@ -76,19 +76,9 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
 }, []);
 
   const handlePayNow = (item) => {
-    const paymentData = {
-      regNo: item.regno,
-      groupCode: item.groupcode,
-      customerName: item.pname,
-      amount: item.schemeSummary?.amount || 0,
-      schemeName: item.schemeSummary?.schemeName,
-      schemes: productData,
-    };
-
-
     navigation.navigate("Buy", {
       productData: item,
-      paymentData,
+      commamt: item.COMMAMT ?? item.schemeSummary?.COMMAMT ?? 0,
     });
   };
 
@@ -99,10 +89,11 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
       const rulesMap = {};
 
       allSchemes.forEach((scheme) => {
-        rulesMap[scheme.schemeName?.trim()] = {
+        rulesMap[scheme.SchemeId] = {
           WeightLedger: scheme.WeightLedger,
           FixedIns: scheme.FixedIns,
           Instalment: scheme.Instalment,
+          COMMAMT: scheme.COMMAMT ?? 0,
         };
       });
 
@@ -216,7 +207,8 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
         const status = isActive ? "Active" : "Deactive";
 
         const schemeName = item.schemeSummary?.schemeName?.trim();
-        const schemeRule = rules[schemeName] || {};
+        const schemeIdKey = Number(item.schemeSummary?.schemeId || item.schemeSummary?.schemeid);
+        const schemeRule = rules[schemeIdKey] || {};
 
         // Determine scheme type based on API rules
         const isWeightScheme = schemeRule.WeightLedger === "Y";
@@ -248,6 +240,7 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
           maturitydate: item.maturityDate,
           joinDate, // Store joinDate for easy access
           remainingDays: 0, // Initialize
+          COMMAMT: schemeRule.COMMAMT ?? 0, // top-level for easy access in Buy.js
 
           /* 🔥 SCHEME SUMMARY WITH API RULES */
           schemeSummary: {
@@ -256,6 +249,7 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
               schemeRule.WeightLedger || item.schemeSummary?.WeightLedger,
             FixedIns: schemeRule.FixedIns || item.schemeSummary?.FixedIns,
             Instalment: schemeRule.Instalment || item.schemeSummary?.instalment,
+            COMMAMT: schemeRule.COMMAMT ?? item.schemeSummary?.COMMAMT ?? 0,
             schemeType: {
               isWeightScheme,
               isAmountScheme,

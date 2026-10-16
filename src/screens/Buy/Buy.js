@@ -27,6 +27,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS, SIZES, FONTS, SHADOWS } from "../../utils/AppTheme";
 import CommonHeader from "../../components/CommonHeader/CommonHeader";
 import { insertSchemeCollection } from "../../services/InstallmentUpdateService";
+import { getAllSchemes } from "../../services/SchemeNameService";
 
 // -----------------------------
 // API Functions
@@ -37,7 +38,19 @@ import { insertSchemeCollection } from "../../services/InstallmentUpdateService"
 const BuyPage = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { productData } = route.params || {};
+  const { productData, commamt } = route.params || {};
+
+  const [minAmount, setMinAmount] = useState(commamt ?? 0);
+
+  useEffect(() => {
+    getAllSchemes()
+      .then((schemes) => {
+        const schemeId = Number(productData?.schemeSummary?.schemeId);
+        const match = schemes.find((s) => s.SchemeId === schemeId);
+        setMinAmount(match?.COMMAMT ?? 0);
+      })
+      .catch(() => {});
+  }, []);
 
   // ---------- memoized product info ----------
   const productInfo = useMemo(
@@ -140,9 +153,8 @@ const BuyPage = () => {
       setAmountError("Please enter a valid amount greater than 0");
       return false;
     }
-    // Add minimum amount validation
-    if (numValue < 1) {
-      setAmountError("Minimum amount is ₹100");
+    if (numValue < minAmount) {
+      setAmountError(`Minimum amount is ₹${minAmount}`);
       return false;
     }
     if (numValue > 10000000) {
@@ -151,7 +163,7 @@ const BuyPage = () => {
     }
     setAmountError("");
     return true;
-  }, []);
+  }, [minAmount]);
 
   const handleAmountChange = useCallback(
     (value) => {
@@ -415,13 +427,11 @@ const BuyPage = () => {
   const isButtonDisabled = () => {
     if (loading) return true;
     if (fetchingPaymentType) return true;
-
-    // If both are "N", amount input is enabled - validate amount
     if (productInfo.weightLedger === "N" && productInfo.FixedIns === "N") {
-      if (!!amountError) return true;
       if (!amount) return true;
+      if (!!amountError) return true;
+      if (parseFloat(amount) < minAmount) return true;
     }
-
     return false;
   };
 
@@ -751,7 +761,7 @@ const BuyPage = () => {
                   <Text
                     style={[styles.errorText, { color: COLORS.textTertiary }]}
                   >
-                    Enter amount between ₹100 - ₹1,00,00,000
+                    Enter amount between ₹{minAmount} - ₹1,00,00,000
                   </Text>
                 )}
               </View>

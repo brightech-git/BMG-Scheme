@@ -21,7 +21,7 @@ export const getAllSchemes = async () => {
     }
 
     const data = await response.json();
-    return data; // Array of schemes
+    return data;
   } catch (error) {
     console.error("Error fetching schemes:", error);
     throw error;

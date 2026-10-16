@@ -105,13 +105,8 @@ const SchemeDetailsPage = ({
     }
   }, [numericSchemeId]);
 
-  const MINIMUM_AMOUNT_MAP = {
-    1: 1,    // Amount Scheme
-    2: 100,  // Digi Silver
-    3: 10000, // Fixed Deposit
-  };
-
-  const minAmount = MINIMUM_AMOUNT_MAP[numericSchemeId] || 0;
+  const minAmount = schemes?.find((s) => s.SchemeId === numericSchemeId)?.COMMAMT || 0;
+  console.log("💰 Min Amount for SchemeId", numericSchemeId, ":", minAmount);
 
   // Keyboard handling
   useEffect(() => {
@@ -223,6 +218,7 @@ const SchemeDetailsPage = ({
       schemeOptions,
       isFetchingSchemeOptions,
       API_BASE_URL_OLD,
+      minAmount,
     };
 
     switch (numericSchemeId) {

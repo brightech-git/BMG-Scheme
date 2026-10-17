@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as Application from 'expo-application';
 import {
   TouchableOpacity,
   View,
@@ -191,7 +192,7 @@ function ProfileContainer(props) {
           {/* App Version */}
           <View style={styles.versionContainer}>
             <TextDefault style={styles.versionText} H6>
-              Version 1.0.0
+              Version {Application.nativeApplicationVersion ?? 'Unknown'}
             </TextDefault>
           </View>
         </ScrollView>

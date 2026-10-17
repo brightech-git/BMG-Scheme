@@ -30,7 +30,7 @@ import {
 } from "../../../utils/AsynchStorageHelper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Application from "expo-application";
-import { checkForUpdate } from "../../../utils/VersionChecker";
+import { checkForAppUpdate } from "../../../utils/VersionChecker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import memberPhotoService from "../../../services/UserProfileService";
@@ -258,12 +258,12 @@ const DrawerMenu = ({ isVisible, onClose }) => {
   // Version check on mount
   useEffect(() => {
     const verifyVersion = async () => {
-      const result = await checkForUpdate("com.bmg.bmgscheme");
+      const result = await checkForAppUpdate();
 
-      if (result.isUpdateAvailable) {
+      if (result?.forceUpdate) {
         Alert.alert(
           "Update Available",
-          `A new version (${result.storeVersion}) is available on the Play Store.`,
+          `A new version (${result.latestVersion}) is available. Please update the app.`,
           [
             {
               text: "Update Now",
@@ -279,7 +279,9 @@ const DrawerMenu = ({ isVisible, onClose }) => {
       }
     };
 
-    verifyVersion();
+    verifyVersion().catch(error => {
+      console.warn("Profile update check failed:", error);
+    });
   }, []);
 
   // PanResponder for swipe-to-close

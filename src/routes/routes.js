@@ -122,6 +122,8 @@ useEffect(() => {
         <MainStack.Screen name="ForgotMpin" component={Screen.ResetMpinScreen} />
         <MainStack.Screen name="EnterNumber" component={Screen.EnterNumberScreen} />
         <MainStack.Screen name="VerifyOtp" component={Screen.VerifyOtpScreen} />
+        <MainStack.Screen name="GoogleContactUpdate" component={Screen.GoogleContactUpdateScreen} />
+        <MainStack.Screen name="GoogleContactVerifyOTP" component={Screen.GoogleContactVerifyOTPScreen} />
 
         {/* Main App */}
         <MainStack.Screen name="Drawer" component={Drawer} />

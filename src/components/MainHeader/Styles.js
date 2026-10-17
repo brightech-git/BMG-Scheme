@@ -12,7 +12,7 @@ export default StyleSheet.create({
     borderBottomLeftRadius: SIZES.radius.xl,
     borderBottomRightRadius: SIZES.radius.xl,
     ...theme.SHADOWS.lg,
-    minHeight: verticalScale(160),
+    minHeight: verticalScale(185),
   },
 
   topHeaderSection: {
@@ -101,7 +101,7 @@ export default StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     position: "absolute",
-    bottom: -verticalScale(40),
+    bottom:verticalScale(5),
     left: SIZES.padding.lg,
     right: SIZES.padding.lg,
     gap: SIZES.padding.md,

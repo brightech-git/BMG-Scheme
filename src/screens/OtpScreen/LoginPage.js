@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { GoogleSignin, statusCodes } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { showToast } from "../../utils/toast";
 import theme from "../../utils/AppTheme";
 import styles from "./LoginStyles";
@@ -38,20 +39,19 @@ function LoginPage({ route }) {
     password: false,
   });
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   const navigation = useNavigation();
 
   // ✅ Google Sign-In Config
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId:
-        "657047091285-hetgcscq8hvli59d0c6oqvg9aoat8850.apps.googleusercontent.com",
-      iosClientId:
-        "657047091285-57kkictc0pkfjldtf0u133m82huit6rg.apps.googleusercontent.com",
-      scopes: ["profile", "email"],
-      offlineAccess: true,
-    });
+    if (Platform.OS === 'android') {
+      GoogleSignin.configure({
+        webClientId: "657047091285-hetgcscq8hvli59d0c6oqvg9aoat8850.apps.googleusercontent.com",
+        scopes: ["profile", "email"],
+        offlineAccess: true,
+      });
+    }
   }, []);
 
   const validateField = (fieldName, value) => {
@@ -114,23 +114,43 @@ function LoginPage({ route }) {
   // ✅ Google Sign-In
   const handleGoogleSignIn = async () => {
     try {
-      setGoogleLoading(true);
-      const hasPlayServices = await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-      if (!hasPlayServices) throw new Error("Google Play Services unavailable");
-
-      await GoogleSignin.signOut();
+      setSocialLoading(true);
+      await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      const idToken = tokens?.idToken || userInfo?.idToken;
+      const idToken = userInfo.data?.idToken;
 
       if (!idToken) throw new Error("No ID token from Google");
-      await handleGoogleAuthentication(idToken, userInfo.user);
+      await handleSocialAuthentication(idToken, "google");
     } catch (error) {
       handleGoogleSignInError(error);
     } finally {
-      setGoogleLoading(false);
+      setSocialLoading(false);
+    }
+  };
+
+  // ✅ Apple Sign-In
+  const handleAppleSignIn = async () => {
+    try {
+      setSocialLoading(true);
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        showToast("Apple Sign-In is not available on this device");
+        return;
+      }
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const idToken = credential.identityToken;
+      if (!idToken) throw new Error("No identity token from Apple");
+      await handleSocialAuthentication(idToken, "apple");
+    } catch (error) {
+      if (error.code === "ERR_REQUEST_CANCELED") return;
+      showToast(error.message || "Apple sign-in failed");
+    } finally {
+      setSocialLoading(false);
     }
   };
 
@@ -150,27 +170,25 @@ function LoginPage({ route }) {
     }
   };
 
-  // ✅ Google Auth to backend
-  const handleGoogleAuthentication = async (idToken, userInfo = null) => {
+  // ✅ Social Auth to backend (Google or Apple)
+  const handleSocialAuthentication = async (idToken, provider) => {
     try {
-      const payload = { idToken, userInfo };
-      const response = await userService.googleLogin(payload);
+      const response = provider === "apple"
+        ? await userService.appleLogin({ idToken })
+        : await userService.googleLogin({ idToken });
 
       if (response.success && response.data) {
-
         const { id, email, username, message, contactNumber } = response.data;
-
         await saveUserData(response.data);
-
-        showToast(message || "Logged in successfully with Google");
+        showToast(message || `Logged in successfully with ${provider === "apple" ? "Apple" : "Google"}`);
 
         if (!contactNumber || contactNumber.trim() === "") {
-          navigation.navigate("EnterNumber", { userId: id, email, username });
+          navigation.navigate("GoogleContactUpdate", { userId: id, email, username });
         } else {
           navigation.navigate(resetMpin ? "ForgotMpin" : "VerifyMpinScreen");
         }
       } else {
-        showToast(response.error || "Google authentication failed");
+        showToast(response.error || `${provider === "apple" ? "Apple" : "Google"} authentication failed`);
       }
     } catch (error) {
       showToast("Authentication failed. Please try again.");
@@ -383,11 +401,11 @@ function LoginPage({ route }) {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {(loading || googleLoading) && (
+        {(loading || socialLoading) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={styles.loadingText}>
-              {googleLoading ? "Signing in with Google..." : "Processing..."}
+              {socialLoading ? "Signing in..." : "Processing..."}
             </Text>
           </View>
         )}

@@ -15,7 +15,8 @@ import {
   Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getHash, useOtpVerify, removeListener } from "react-native-otp-verify";
+const OtpVerifyLib = Platform.OS === "android" ? require("react-native-otp-verify") : {};
+const { getHash = () => Promise.resolve([]), useOtpVerify = () => ({}), removeListener = () => {} } = OtpVerifyLib;
 import { API_BASE_URL } from "../../Config/API";
 import { COLORS, SIZES, FONTS, moderateScale } from "../../utils/Theme";
 

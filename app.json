@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bmg.bmgscheme",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "appleTeamId": "236BJUX2XU"
     },
     "android": {
       "permissions": [
@@ -40,6 +43,8 @@
     },
     "owner": "jk_08",
     "plugins": [
+      "@react-native-google-signin/google-signin",
+      "expo-apple-authentication",
       "./plugins/withFirebaseNotificationChannel",
       "expo-font",
       "expo-localization",

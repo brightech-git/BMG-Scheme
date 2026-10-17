@@ -16,11 +16,13 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getHash } from "react-native-otp-verify";
+const OtpVerifyLib = Platform.OS === "android" ? require("react-native-otp-verify") : {};
+const { getHash = () => Promise.resolve([]) } = OtpVerifyLib;
 import {
   GoogleSignin,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { showToast } from "../../utils/toast";
 import theme from "../../utils/AppTheme";
 import styles from "./RegisterStyles";
@@ -54,7 +56,7 @@ function RegisterPage({ navigation }) {
     password: false,
   });
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
   const [appHash, setAppHash] = useState("");
 
   // Validation rules
@@ -88,12 +90,13 @@ function RegisterPage({ navigation }) {
   }, []);
 
   const initializeGoogleSignIn = useCallback(() => {
-    GoogleSignin.configure({
-      webClientId: "657047091285-hetgcscq8hvli59d0c6oqvg9aoat8850.apps.googleusercontent.com",
-      iosClientId: "657047091285-57kkictc0pkfjldtf0u133m82huit6rg.apps.googleusercontent.com",
-      scopes: ["profile", "email"],
-      offlineAccess: true,
-    });
+    if (Platform.OS === 'android') {
+      GoogleSignin.configure({
+        webClientId: "657047091285-hetgcscq8hvli59d0c6oqvg9aoat8850.apps.googleusercontent.com",
+        scopes: ["profile", "email"],
+        offlineAccess: true,
+      });
+    }
   }, []);
 
   const initializeAppHash = useCallback(async () => {
@@ -165,24 +168,17 @@ function RegisterPage({ navigation }) {
   // ✅ Handle Google Sign-In
   const handleGoogleSignIn = useCallback(async () => {
     try {
-      setGoogleLoading(true);
-      const hasPlayServices = await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-      if (!hasPlayServices) throw new Error("Google Play Services unavailable");
-
-      await GoogleSignin.signOut();
+      setSocialLoading(true);
+      await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      const idToken = tokens?.idToken || userInfo?.idToken;
-
+      const idToken = userInfo.data?.idToken;
       if (!idToken) throw new Error("No ID token from Google");
-      await handleGoogleAuthentication(idToken, userInfo.user);
+      await handleSocialAuthentication(idToken, "google");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       handleGoogleSignInError(error);
     } finally {
-      setGoogleLoading(false);
+      setSocialLoading(false);
     }
   }, []);
 
@@ -196,37 +192,54 @@ function RegisterPage({ navigation }) {
     showToast(errorMessages[error.code] || `Google sign-in failed: ${error.message || "Try again"}`);
   }, []);
 
-  // ✅ Google Auth to backend
-  const handleGoogleAuthentication = useCallback(async (idToken, userInfo = null) => {
+  // ✅ Apple Sign-In
+  const handleAppleSignIn = useCallback(async () => {
     try {
-      const payload = { 
-        idToken, 
-        userInfo, 
-        used_referral_code: formData.referralCode.trim() || "" 
-      };
-      const response = await userService.googleLogin(payload);
+      setSocialLoading(true);
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        showToast("Apple Sign-In is not available on this device");
+        return;
+      }
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const idToken = credential.identityToken;
+      if (!idToken) throw new Error("No identity token from Apple");
+      await handleSocialAuthentication(idToken, "apple");
+    } catch (error) {
+      if (error.code === "ERR_REQUEST_CANCELED") return;
+      showToast(error.message || "Apple sign-in failed");
+    } finally {
+      setSocialLoading(false);
+    }
+  }, []);
+
+  // ✅ Social Auth to backend (Google or Apple)
+  const handleSocialAuthentication = useCallback(async (idToken, provider) => {
+    try {
+      const payload = { idToken, used_referral_code: formData.referralCode.trim() || "" };
+      const response = provider === "apple"
+        ? await userService.appleLogin(payload)
+        : await userService.googleLogin(payload);
 
       if (response.success && response.data) {
         const { id, email, username, message, contactNumber } = response.data;
-
         await saveUserData(response.data);
-
-        showToast(message || "Logged in successfully with Google");
-
+        showToast(message || `Logged in successfully with ${provider === "apple" ? "Apple" : "Google"}`);
         if (!contactNumber || contactNumber.trim() === "") {
-          navigation.navigate("EnterNumber", {
-            userId: id,
-            email,
-            username,
-          });
+          navigation.navigate("GoogleContactUpdate", { userId: id, email, username });
         } else {
           navigation.navigate("MpinScreen", { step: 3 });
         }
       } else {
-        showToast(response.error || "Google authentication failed");
+        showToast(response.error || `${provider === "apple" ? "Apple" : "Google"} authentication failed`);
       }
     } catch (error) {
-      console.error("Google authentication error:", error);
+      console.error("Social authentication error:", error);
       showToast("Authentication failed. Please try again.");
     }
   }, [navigation, formData.referralCode]);
@@ -591,31 +604,49 @@ function RegisterPage({ navigation }) {
                   </LinearGradient>
                 </TouchableOpacity>
 
-                {/* Divider for Google Sign-In */}
+                {/* Social Buttons */}
                 <View style={styles.dividerContainer}>
                   <View style={styles.divider} />
                   <Text style={styles.dividerText}>or continue with</Text>
                   <View style={styles.divider} />
                 </View>
 
-                {/* Google Sign-In Button */}
-                <TouchableOpacity
-                  style={[styles.googleButton, googleLoading && styles.disabledButton]}
-                  onPress={handleGoogleSignIn}
-                  disabled={googleLoading}
-                >
-                  {googleLoading ? (
-                    <ActivityIndicator color={COLORS.primary} />
-                  ) : (
-                    <View style={styles.googleButtonContent}>
-                      <Image
-                        source={require("../../assets/icons/google.png")}
-                        style={styles.googleIcon}
-                      />
-                      <Text style={styles.googleButtonText}>Continue with Google</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                {Platform.OS === "ios" ? (
+                  <TouchableOpacity
+                    style={[styles.googleButton, socialLoading && styles.disabledButton]}
+                    onPress={handleAppleSignIn}
+                    disabled={socialLoading}
+                  >
+                    {socialLoading ? (
+                      <ActivityIndicator color={COLORS.primary} />
+                    ) : (
+                      <View style={styles.googleButtonContent}>
+                        <Text style={[styles.googleButtonText, { fontSize: 18, marginRight: SIZES.md }]}>
+                          
+                        </Text>
+                        <Text style={styles.googleButtonText}>Continue with Apple</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.googleButton, socialLoading && styles.disabledButton]}
+                    onPress={handleGoogleSignIn}
+                    disabled={socialLoading}
+                  >
+                    {socialLoading ? (
+                      <ActivityIndicator color={COLORS.primary} />
+                    ) : (
+                      <View style={styles.googleButtonContent}>
+                        <Image
+                          source={require("../../assets/icons/google.png")}
+                          style={styles.googleIcon}
+                        />
+                        <Text style={styles.googleButtonText}>Continue with Google</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
 
                 <View style={styles.loginContainer}>
                   <Text style={styles.loginText}>Already have an account?</Text>
@@ -628,11 +659,11 @@ function RegisterPage({ navigation }) {
           </ScrollView>
 
           {/* Loading Overlay */}
-          {(loading || googleLoading) && (
+          {(loading || socialLoading) && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color={COLORS.primary} />
               <Text style={styles.loadingText}>
-                {googleLoading ? "Signing in with Google..." : "Creating your account..."}
+                {socialLoading ? "Signing in..." : "Creating your account..."}
               </Text>
             </View>
           )}

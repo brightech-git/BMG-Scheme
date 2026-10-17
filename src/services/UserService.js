@@ -225,6 +225,56 @@ checkReferralCode: async (userId, referralCode) => {
     return res;
   },
 
+  appleLogin: async (payload) => {
+    console.log("🟢 Apple Login - Step 1: Sending Data");
+    const res = await request(
+      `${API_BASE_URL}/apple-login`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      false,
+      "APPLE_LOGIN"
+    );
+
+    if (res.success && res.data?.token) {
+      console.log("🟢 Apple Login - Step 2: Saving Token");
+      await AsyncStorage.setItem("authToken", res.data.token);
+    } else {
+      console.log("🔴 Apple Login - Step 2: Failed");
+    }
+
+    return res;
+  },
+
+  requestGoogleContactUpdate: async (params) => {
+    const query = new URLSearchParams({
+      userId: params.userId,
+      newContactNumber: params.newContactNumber,
+      ...(params.usedReferralCode ? { usedReferralCode: params.usedReferralCode } : {}),
+      ...(params.hashKey ? { hashKey: params.hashKey } : {}),
+    });
+    return request(
+      `${API_BASE_URL}/request-google-contact-update?${query.toString()}`,
+      { method: "POST" },
+      false,
+      "GOOGLE_CONTACT_UPDATE"
+    );
+  },
+
+  verifyGoogleContactOtp: async (params) => {
+    const query = new URLSearchParams({
+      newContactNumber: params.newContactNumber,
+      otp: params.otp,
+    });
+    return request(
+      `${API_BASE_URL}/verify-google-contact-otp?${query.toString()}`,
+      { method: "POST" },
+      false,
+      "GOOGLE_CONTACT_VERIFY_OTP"
+    );
+  },
+
   debugAuthStatus: async () => {
     const token = await AsyncStorage.getItem("authToken");
     const debugData = await AsyncStorage.getItem("debug_user_data");

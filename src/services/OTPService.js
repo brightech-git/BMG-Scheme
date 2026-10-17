@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../Config/API";
-import { getHash } from "react-native-otp-verify";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
+const OtpVerifyLib = Platform.OS === "android" ? require("react-native-otp-verify") : {};
+const { getHash = () => Promise.resolve([]) } = OtpVerifyLib;
 import { saveUserData } from "../utils/AsynchStorageHelper";
 
 class OTPService {

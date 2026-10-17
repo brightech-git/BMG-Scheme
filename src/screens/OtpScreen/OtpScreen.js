@@ -15,7 +15,9 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getHash, useOtpVerify, removeListener } from "react-native-otp-verify";
+
+const OtpVerifyLib = Platform.OS === "android" ? require("react-native-otp-verify") : {};
+const { getHash = () => Promise.resolve([]), useOtpVerify = () => ({}), removeListener = () => {} } = OtpVerifyLib;
 import { showToast } from "../../utils/toast";
 import theme from "../../utils/AppTheme"; // Changed from appTheme to theme
 import styles from "./OtpStyles.js";

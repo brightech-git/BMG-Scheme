@@ -52,6 +52,8 @@ import DuePayment from "../components/DuePayment/DuePayment"
 import SchemeListPage from './MyRedeemption/MyRedeemption'
 import ReferralPending from './ReferalPending/ReferalPending'
 import ReferralShareScreen from './AppShare/AppShare'
+import GoogleContactUpdateScreen from './GoogleLogin/GoogleContactUpdateScreen'
+import GoogleContactVerifyOTPScreen from './GoogleLogin/GoogleContactVerifyOTPScreen'
 
 export {
   MainLanding,
@@ -106,5 +108,7 @@ export {
   DuePayment,
   SchemeListPage,
   ReferralPending,
-  ReferralShareScreen
+  ReferralShareScreen,
+  GoogleContactUpdateScreen,
+  GoogleContactVerifyOTPScreen,
 }

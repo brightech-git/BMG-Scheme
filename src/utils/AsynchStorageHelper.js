@@ -54,7 +54,6 @@ export const saveUserData = async (data) => {
 
     await Promise.all(promises);
 
-    console.log("✅ User data saved successfully");
     return data;
   } catch (error) {
     console.error("❌ Error saving user data:", error);
@@ -82,7 +81,7 @@ export const updateUserData = async (updates) => {
 
     // Get existing data
     const existingData = await getUserData();
-    
+
     if (!existingData) {
       // No existing data, save as new
       return await saveUserData(updates);
@@ -90,7 +89,7 @@ export const updateUserData = async (updates) => {
 
     // IMPORTANT: Never allow token to be removed
     const token = existingData.token || await getAuthToken();
-    
+
     // Merge updates with existing data
     const mergedData = {
       ...existingData,
@@ -101,11 +100,6 @@ export const updateUserData = async (updates) => {
     // Save merged data
     await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mergedData));
 
-    console.log("✅ User data updated, token preserved:", {
-      hasToken: !!mergedData.token,
-      userId: mergedData.id,
-      updatedFields: Object.keys(updates)
-    });
 
     return mergedData;
   } catch (error) {
@@ -121,7 +115,7 @@ export const updateUserProfile = async (profileData) => {
   try {
     // Define authentication fields that should NEVER be overwritten
     const PROTECTED_FIELDS = ['token', 'referralCode', 'referralLink', 'playStoreLink', 'password', 'usedReferralCode'];
-    
+
     // Filter out protected fields from profile updates
     const safeProfileData = Object.keys(profileData).reduce((acc, key) => {
       if (!PROTECTED_FIELDS.includes(key)) {
@@ -158,7 +152,7 @@ export const getAuthToken = async () => {
   try {
     // First check dedicated auth token storage
     let token = await AsyncStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
-    
+
     if (token) {
       return token;
     }
@@ -185,7 +179,6 @@ export const clearUserData = async () => {
   try {
     const keys = Object.values(STORAGE_KEYS);
     await AsyncStorage.multiRemove(keys);
-    console.log("🧹 All user data cleared");
   } catch (error) {
     console.error("❌ Error clearing user data:", error);
   }
@@ -211,7 +204,6 @@ export const logoutUser = async () => {
       "paymentResponse",
     ];
     await AsyncStorage.multiRemove(sessionKeys);
-    console.log("🧹 Logout: session data cleared");
   } catch (error) {
     console.error("❌ Error during logout cleanup:", error);
   }
@@ -224,13 +216,7 @@ export const verifyToken = async () => {
   try {
     const token = await getAuthToken();
     const userData = await getUserData();
-    
-    console.log("🔐 Token verification:", {
-      hasToken: !!token,
-      tokenLength: token?.length || 0,
-      hasUserData: !!userData,
-      userId: userData?.id
-    });
+
 
     return {
       hasToken: !!token,
@@ -249,17 +235,16 @@ export const updateAuthToken = async (token) => {
       console.warn("⚠️ No token provided for restoration");
       return false;
     }
-    
+
     await AsyncStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-    
+
     // Also ensure it's in user data
     const userData = await getUserData();
     if (userData) {
       userData.token = token;
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
     }
-    
-    console.log("🔐 Token restored successfully");
+
     return true;
   } catch (error) {
     console.error("❌ Error restoring token:", error);

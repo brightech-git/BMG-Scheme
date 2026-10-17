@@ -22,6 +22,7 @@ const DigiSilverScheme = ({
   numericSchemeId,
   inputRefs,
   setActiveInput,
+  minAmount = 100,
 }) => {
   const [silverRate, setSilverRate] = useState(null);
   const [loadingSilverRate, setLoadingSilverRate] = useState(false);
@@ -105,10 +106,7 @@ const DigiSilverScheme = ({
     convertAmountToWeight(sanitized);
   };
 
-  // Validate fields
-  const MINIMUM_DIGISILVER_AMOUNT = 100;
-// Validate fields
-useEffect(() => {
+  useEffect(() => {
   const errors = { ...validationErrors };
 
   if (
@@ -116,10 +114,10 @@ useEffect(() => {
     isNaN(formData.amount) ||
     parseFloat(formData.amount) <= 0
   ) {
-    errors.amount = "Enter a valid amount greater than 100";
+    errors.amount = `Enter a valid amount greater than ₹${minAmount}`;
   } 
-  else if (parseFloat(formData.amount) < MINIMUM_DIGISILVER_AMOUNT) {
-    errors.amount = `Minimum amount is ₹${MINIMUM_DIGISILVER_AMOUNT}`;
+  else if (parseFloat(formData.amount) < minAmount) {
+    errors.amount = `Minimum amount is ₹${minAmount}`;
   } 
   else {
     delete errors.amount;
@@ -142,6 +140,7 @@ useEffect(() => {
   formData?.calculatedWeight,
   silverRate,
   loadingSilverRate,
+  minAmount,
 ]);
 
 

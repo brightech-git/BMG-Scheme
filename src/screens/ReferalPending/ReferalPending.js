@@ -36,7 +36,7 @@ const ReferralPending = () => {
   });
   const [activeFilter, setActiveFilter] = useState('all');
   const [showHelpTip, setShowHelpTip] = useState(true);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -66,7 +66,7 @@ const ReferralPending = () => {
     try {
       setLoading(true);
       const userId = await AsyncStorage.getItem("userId");
-      
+
       if (userId) {
         await fetchAllReferrals(userId);
       }
@@ -94,7 +94,7 @@ const ReferralPending = () => {
       if (!completedResponse.ok) {
         throw new Error(`Completed API failed: ${completedResponse.status}`);
       }
-      
+
       if (!pendingResponse.ok) {
         throw new Error(`Pending API failed: ${pendingResponse.status}`);
       }
@@ -102,8 +102,6 @@ const ReferralPending = () => {
       const completedData = await completedResponse.json();
       const pendingData = await pendingResponse.json();
 
-      console.log('Completed API data:', completedData);
-      console.log('Pending API data:', pendingData);
 
       // Process completed referrals from first API - NEW STRUCTURE
       let userInfo = null;
@@ -112,7 +110,7 @@ const ReferralPending = () => {
       // Check new structure first: { referrer: {...}, transactions: [...] }
       if (completedData && completedData.referrer && Array.isArray(completedData.transactions)) {
         const { referrer, transactions } = completedData;
-        
+
         // Set user info from referrer object
         userInfo = {
           ...referrer,
@@ -123,7 +121,7 @@ const ReferralPending = () => {
           referralLink: referrer.referralLink || `https://bmgscheme.com/signup?ref=${referrer.referral_code || ''}`
         };
         setUserData(userInfo);
-        
+
         // Process completed referrals from transactions array
         transactions.forEach((item) => {
           if (item.new_member_personal_id) {
@@ -157,7 +155,7 @@ const ReferralPending = () => {
           playStoreLink: userInfo.playStoreLink || 'https://play.google.com/store/apps/details?id=com.bmg.bmgscheme',
           referralLink: userInfo.referralLink || `https://bmgscheme.com/signup?ref=${userInfo.referral_code || ''}`
         });
-        
+
         // Process completed referrals (items after the first one)
         for (let i = 1; i < completedData.length; i++) {
           const item = completedData[i];
@@ -180,10 +178,8 @@ const ReferralPending = () => {
           }
         }
       } else {
-        console.log('No completed referrals data found or unexpected format');
       }
 
-      console.log('Processed completed referrals:', completedReferrals);
 
       // Create a map of completed phone numbers for quick lookup
       const completedPhoneNumbers = new Set();
@@ -196,7 +192,6 @@ const ReferralPending = () => {
         }
       });
 
-      console.log('Completed phone numbers:', Array.from(completedPhoneNumbers));
 
       // Process pending referrals from second API
       const pendingReferrals = [];
@@ -205,13 +200,12 @@ const ReferralPending = () => {
           if (item.user_id) {
             const phoneNumber = item.referredContactNumber || item.contact_number || '';
             const cleanPhone = phoneNumber.replace(/\D/g, '');
-            
+
             // Check if this phone number is already in completed referrals
             if (cleanPhone && cleanPhone.length >= 10 && completedPhoneNumbers.has(cleanPhone)) {
-              console.log(`Skipping duplicate phone number: ${phoneNumber} (already completed)`);
               return; // Skip this entry
             }
-            
+
             pendingReferrals.push({
               id: `${item.user_id}_${index}_${Date.now()}`,
               name: item.referredUserName?.trim() || item.referred_user_name?.trim() || 'Unknown User',
@@ -229,16 +223,14 @@ const ReferralPending = () => {
         });
       }
 
-      console.log('Processed pending referrals:', pendingReferrals);
 
       // Combine all referrals
       const allReferrals = [...completedReferrals, ...pendingReferrals];
-      
+
       // Sort by date (newest first)
       allReferrals.sort((a, b) => new Date(b.date) - new Date(a.date));
-      
-      console.log('Total referrals after merge:', allReferrals.length);
-      
+
+
       setReferrals(allReferrals);
       calculateStats(allReferrals);
       filterReferrals(allReferrals, activeFilter);
@@ -280,7 +272,7 @@ const ReferralPending = () => {
     const pending = referralsData.filter(item => item.status === 'pending').length;
     const completed = referralsData.filter(item => item.status === 'completed').length;
     const earned = referralsData.reduce((sum, item) => sum + (item.amount || 0), 0);
-    
+
     setStats({ total, pending, completed, earned });
   }, []);
 
@@ -311,10 +303,10 @@ const ReferralPending = () => {
       Alert.alert('Error', 'Referral code not available');
       return;
     }
-    
+
     const referralLink = userData.referralLink || 
       `https://bmgscheme.com/signup?ref=${userData.referral_code}`;
-    
+
     // Create a summary of referral schemes if available
     let schemeInfo = '';
     const completedReferrals = referrals.filter(r => r.status === 'completed');
@@ -329,18 +321,18 @@ const ReferralPending = () => {
         schemeData.count++;
         schemeData.total += ref.amount;
       });
-      
+
       schemeInfo = '\n\n🎯 **My Referral Success:**\n';
       schemeMap.forEach((data, schemeName) => {
         schemeInfo += `\n• ${schemeName}: ₹${data.total.toFixed(2)} from ${data.count} referral(s)`;
       });
     }
-    
+
     const message = `Join me on BMG Scheme! Use my referral code: **${userData.referral_code}** to get bonus.${schemeInfo}\n\n` +
       `📱 Download app: ${userData.playStoreLink || 'https://play.google.com/store/apps/details?id=com.bmg.bmgscheme'}\n\n` +
       `🔗 Or sign up directly: ${referralLink}\n\n` +
       `💰 I've earned ₹${stats.earned.toFixed(2)} so far!`;
-    
+
     try {
       await Share.share({
         message,
@@ -365,15 +357,15 @@ const ReferralPending = () => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '--';
-      
+
       const now = new Date();
       const diffTime = Math.abs(now - date);
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) return 'Today';
       if (diffDays === 1) return 'Yesterday';
       if (diffDays < 7) return `${diffDays} days ago`;
-      
+
       return date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
@@ -403,7 +395,7 @@ const ReferralPending = () => {
       Alert.alert('Invalid Number', 'Phone number is not available or invalid');
       return;
     }
-    
+
     const phone = phoneNumber.replace(/\D/g, '');
     if (phone.length >= 10) {
       Alert.alert(
@@ -427,7 +419,7 @@ const ReferralPending = () => {
           <Text style={styles.statNumber}>{stats.total}</Text>
           <Text style={styles.statLabel}>Total</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <View style={[styles.statIconContainer, { backgroundColor: theme.COLORS.warning + '15' }]}>
             <Icon name="pending" size={20} color={theme.COLORS.warning} />
@@ -435,7 +427,7 @@ const ReferralPending = () => {
           <Text style={styles.statNumber}>{stats.pending}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <View style={[styles.statIconContainer, { backgroundColor: theme.COLORS.success + '15' }]}>
             <Icon name="check-circle" size={20} color={theme.COLORS.success} />
@@ -443,7 +435,7 @@ const ReferralPending = () => {
           <Text style={styles.statNumber}>{stats.completed}</Text>
           <Text style={styles.statLabel}>Completed</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <View style={[styles.statIconContainer, { backgroundColor: theme.COLORS.info + '15' }]}>
             <Icon name="currency-rupee" size={20} color={theme.COLORS.info} />
@@ -493,7 +485,7 @@ const ReferralPending = () => {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{userData.username || 'User'}</Text>
             <Text style={styles.userBalance}>
@@ -510,7 +502,7 @@ const ReferralPending = () => {
               <Icon name="content-copy" size={14} color={theme.COLORS.primary} />
             </TouchableOpacity>
           </View>
-          
+
           <TouchableOpacity 
             style={styles.shareButton}
             onPress={shareReferralLink}
@@ -519,7 +511,7 @@ const ReferralPending = () => {
             <Icon name="share" size={18} color={theme.COLORS.white} />
           </TouchableOpacity>
         </View>
-        
+
         {/* User stats summary */}
         <View style={styles.userStats}>
           <View style={styles.userStatItem}>
@@ -541,7 +533,7 @@ const ReferralPending = () => {
             <Text style={styles.userStatLabel}>Pending</Text>
           </View>
         </View>
-        
+
         {showHelpTip && (
           <View style={styles.helpTip}>
             <Icon name="info" size={16} color={theme.COLORS.warning} />
@@ -567,7 +559,7 @@ const ReferralPending = () => {
   const renderReferralCard = (item, index) => {
     const isPending = item.status === 'pending';
     const isCompleted = item.status === 'completed';
-    
+
     return (
       <Animated.View 
         key={item.id}
@@ -582,7 +574,7 @@ const ReferralPending = () => {
           styles.statusStrip,
           isPending ? styles.pendingStrip : styles.completedStrip
         ]} />
-        
+
         <View style={styles.cardHeader}>
           <View style={styles.userInfoRow}>
             <View style={styles.avatarContainer}>
@@ -616,11 +608,11 @@ const ReferralPending = () => {
                   </Text>
                 </View>
               </View>
-              
+
               <Text style={styles.userId}>
                 ID: {item.userId}
               </Text>
-              
+
               <View style={styles.schemeRow}>
                 <Icon 
                   name={isCompleted ? "verified" : "schedule"} 
@@ -632,7 +624,7 @@ const ReferralPending = () => {
                   isPending ? styles.pendingSchemeName : styles.completedSchemeName
                 ]}>
                   {item.schemeName}
-                  
+
                 </Text>
               </View>
             </View>
@@ -678,7 +670,7 @@ const ReferralPending = () => {
             </Text>
             <Text style={styles.timeText}>• {formatTime(item.date)}</Text>
           </View>
-          
+
           <View style={[
             styles.referralCodeBadge,
             isPending ? styles.pendingCodeBadge : styles.completedCodeBadge
@@ -732,7 +724,7 @@ const ReferralPending = () => {
 
   const renderContent = () => {
     if (loading) return renderLoading();
-    
+
     return (
       <>
         {renderUserCard()}
@@ -765,7 +757,7 @@ const ReferralPending = () => {
           </TouchableOpacity>
         }
       />
-      
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}

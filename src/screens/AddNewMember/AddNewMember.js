@@ -1,45 +1,28 @@
-import React, { useState, useEffect, useRef } from "react";
-import { View, Alert, StyleSheet, ActivityIndicator, Text, BackHandler } from "react-native";
+import { payWithRazorpay } from "../../services/RazorpayService";
+import React, { useState, useEffect } from "react";
+import { View, Alert, StyleSheet, ActivityIndicator, Text } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { WebView } from "react-native-webview";
 import appTheme from "../../utils/Theme";
 import MemberDetailsPage from "./MemberDetailsPage";
 import SchemeDetailsPage from "./SchemeDetailsPage";
-import { API_BASE_URL_OLD, API_BASE_URL } from "../../Config/API";
+import { API_BASE_URL_OLD } from "../../Config/API";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import smsService from "../../services/SMSService";
 import { sendJoinSchemeNotification } from "../../services/CommonNotificationService";
 import { getAppliedReferralStatus } from "../../services/ReferalService";
 import { buildMemberCreateBody, createMember } from "../../services/MemberCreateService";
-import {
-  fetchWithTimeout,
-  classifyGatewayUrl,
-  interpretPaymentStatus,
-  wasTxnProcessed,
-  markTxnProcessed,
-  savePendingPayment,
-  clearPendingPayment,
-} from "../../utils/PaymentUtils";
 
 const { COLORS } = appTheme;
 
-// Service function to fetch all schemes
 const getAllSchemes = async () => {
   try {
     const response = await fetch(`${API_BASE_URL_OLD}/member/scheme`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
     });
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+    return await response.json();
   } catch (error) {
-    console.error("Error fetching schemes:", error);
     throw error;
   }
 };
@@ -49,33 +32,16 @@ const AddNewMember = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
-  // Extract both schemeId and schemeName from route params
-  const { schemeId: routeSchemeId, schemeName: routeSchemeName } =
-    route.params || {};
+  const { schemeId: routeSchemeId, schemeName: routeSchemeName } = route.params || {};
 
- 
-
-  // Use state for scheme data - parse immediately
   const [selectedScheme, setSelectedScheme] = useState({
     id: routeSchemeId ? Number(routeSchemeId) : null,
     name: routeSchemeName || null,
   });
 
   const [token, setToken] = useState(null);
-
-  // Payment state
-  const [showWebView, setShowWebView] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState("");
-  const [paymentLoading, setPaymentLoading] = useState(true);
-
-  // Synchronous guard against duplicate redirect handling (state is async).
-  const paymentProcessedRef = useRef(false);
-
-  // Track payment completion and processing status
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
-
-  // Store transformed data from MemberDetailsPage
   const [transformedMemberData, setTransformedMemberData] = useState(null);
 
   const [schemeData, setSchemeData] = useState({
@@ -88,55 +54,24 @@ const AddNewMember = () => {
     calculatedWeight: "",
   });
 
-  // Update schemeData when selectedScheme changes
-  useEffect(() => {
-    console.log("🔄 Updating schemeData with selectedScheme:", selectedScheme);
-    setSchemeData((prev) => ({
-      ...prev,
-      selectedSchemeId: selectedScheme.id,
-    }));
-
-    // Also fetch scheme options if we have an ID
-    if (selectedScheme.id) {
-      fetchSchemeOptions(selectedScheme.id);
-    }
-  }, [selectedScheme]);
-
   const [schemeOptions, setSchemeOptions] = useState([]);
   const [isFetchingSchemeOptions, setIsFetchingSchemeOptions] = useState(false);
-
-  // New state for storing all schemes
   const [allSchemes, setAllSchemes] = useState([]);
   const [isFetchingSchemes, setIsFetchingSchemes] = useState(false);
-
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  // Payment order details
-  const [orderDetails, setOrderDetails] = useState(null);
-  const [currentPaymentData, setCurrentPaymentData] = useState(null);
-
-  // Referral
   const [ReferralCode, setReferralCode] = useState(null);
 
-  useEffect(() => {
-    fetchReferralStatus();
-  }, []);
+  useEffect(() => { fetchReferralStatus(); }, []);
 
   const fetchReferralStatus = async () => {
     const result = await getAppliedReferralStatus();
-    const referralCode = result?.appliedReferralData?.referral_code;
-    console.log("Referral Code:", referralCode);
-    setReferralCode(referralCode);
+    setReferralCode(result?.appliedReferralData?.referral_code);
   };
 
-  // Fetch all schemes on component mount
-  useEffect(() => {
-    fetchAllSchemes();
-  }, []);
+  useEffect(() => { fetchAllSchemes(); }, []);
 
-  // Handle payment completion
   useEffect(() => {
     if (paymentCompleted) {
       resetFormFields();
@@ -144,106 +79,58 @@ const AddNewMember = () => {
     }
   }, [paymentCompleted]);
 
-  // Hardware back while the payment gateway is open: confirm before exiting
-  // so the user can't silently abandon an in-flight payment.
   useEffect(() => {
-    if (!showWebView) return;
+    setSchemeData((prev) => ({ ...prev, selectedSchemeId: selectedScheme.id }));
+    if (selectedScheme.id) fetchSchemeOptions(selectedScheme.id);
+  }, [selectedScheme]);
 
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      Alert.alert(
-        "Cancel Payment?",
-        "Your payment is in progress. Are you sure you want to cancel?",
-        [
-          { text: "No", style: "cancel" },
-          {
-            text: "Yes, Cancel",
-            style: "destructive",
-            onPress: () => {
-              // Keep the pending record — if the user actually paid before
-              // backing out, recovery will verify and credit it.
-              setShowWebView(false);
-              setPaymentUrl("");
-              setIsProcessingPayment(false);
-              setProcessingPayment(false);
-            },
-          },
-        ]
-      );
-      return true;
-    });
+  useEffect(() => {
+    (async () => {
+      const savedToken = await AsyncStorage.getItem("authToken");
+      if (savedToken) setToken(savedToken);
+    })();
+  }, []);
 
-    return () => backHandler.remove();
-  }, [showWebView]);
-
-  // Fetch all available schemes
   const fetchAllSchemes = async () => {
     setIsFetchingSchemes(true);
     try {
       const schemes = await getAllSchemes();
       setAllSchemes(schemes);
-
-      // If we have a route schemeId but no name, try to find the name
       if (selectedScheme.id && !selectedScheme.name) {
-        const foundScheme = schemes.find(
-          (s) => s.SchemeId === selectedScheme.id
-        );
+        const foundScheme = schemes.find((s) => s.SchemeId === selectedScheme.id);
         if (foundScheme) {
-          setSelectedScheme((prev) => ({
-            ...prev,
-            name: foundScheme.schemeName || routeSchemeName,
-          }));
+          setSelectedScheme((prev) => ({ ...prev, name: foundScheme.schemeName || routeSchemeName }));
         }
       }
     } catch (error) {
-      console.error("Error fetching all schemes:", error);
       Alert.alert("Error", "Failed to fetch schemes. Please try again.");
     } finally {
       setIsFetchingSchemes(false);
     }
   };
 
-  // Get scheme name with proper fallbacks
   const getSchemeName = (id) => {
     if (!id) return selectedScheme.name || "No Scheme Selected";
     const numericId = Number(id);
-
-    // First check selectedScheme state
-    if (selectedScheme.id === numericId && selectedScheme.name) {
-      return selectedScheme.name;
-    }
-
-    // Then check allSchemes
+    if (selectedScheme.id === numericId && selectedScheme.name) return selectedScheme.name;
     const scheme = allSchemes.find((s) => s.SchemeId === numericId);
-    if (scheme) {
-      return scheme.schemeName || "Unknown Scheme";
-    }
-
-    // Finally fallback to route scheme name
+    if (scheme) return scheme.schemeName || "Unknown Scheme";
     return selectedScheme.name || routeSchemeName || "Unknown Scheme";
   };
 
-  // Fetch GROUPCODE and REGNO for selected scheme
   const fetchSchemeOptions = async (schemeId) => {
     if (!schemeId) return;
-
     setIsFetchingSchemeOptions(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL_OLD}/member/schemeid?schemeId=${schemeId}`
-      );
+      const response = await fetch(`${API_BASE_URL_OLD}/member/schemeid?schemeId=${schemeId}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-
-      // Normalize data — never invent a registration number client-side
       const normalizedData = data.map((item) => ({
         groupCode: item.GROUPCODE,
         regNo: item.CURRENTREGNO || item.REGNO || "",
         amount: item.AMOUNT || "",
       }));
-
       setSchemeOptions(normalizedData);
-
-      // Preselect first option
       if (normalizedData.length > 0) {
         setSchemeData((prev) => ({
           ...prev,
@@ -253,836 +140,42 @@ const AddNewMember = () => {
         }));
       }
     } catch (error) {
-      console.error("Error fetching scheme options:", error);
       Alert.alert("Error", "Failed to fetch scheme details. Please try again.");
     } finally {
       setIsFetchingSchemeOptions(false);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      const savedToken = await AsyncStorage.getItem("authToken");
-      console.log("🟢 Saved token:", savedToken);
-      if (savedToken) setToken(savedToken);
-    })();
-  }, []);
-
   const handleBack = () => {
-    if (showWebView) {
-      setShowWebView(false);
-      setPaymentUrl("");
-      setIsProcessingPayment(false);
-      setProcessingPayment(false);
-    } else if (currentStep === 2) {
+    if (currentStep === 2) {
       setCurrentStep(1);
     } else {
       navigation.navigate("MainLanding");
     }
   };
 
-  // Function to handle scheme selection from MemberDetailsPage
   const handleSchemeSelection = (schemeId, schemeName) => {
-    console.log("📋 Scheme selected from MemberDetailsPage:", {
-      schemeId,
-      schemeName,
-    });
-
-    // Update selectedScheme state
     const numericId = Number(schemeId);
-    setSelectedScheme({
-      id: numericId,
-      name: schemeName || getSchemeName(numericId),
-    });
-
-    // Update schemeData
-    setSchemeData((prev) => ({
-      ...prev,
-      selectedSchemeId: numericId,
-    }));
-
-    // Fetch options for the new scheme
+    setSelectedScheme({ id: numericId, name: schemeName || getSchemeName(numericId) });
+    setSchemeData((prev) => ({ ...prev, selectedSchemeId: numericId }));
     fetchSchemeOptions(numericId);
   };
 
   const handleNextStep = (memberFormData = {}) => {
-    console.log("📋 MemberDetailsPage onSubmit received (fields):", Object.keys(memberFormData).length);
-
-    // Store the transformed data directly as-is
-    // The MemberDetailsPage already sends transformed data with correct field names
     setTransformedMemberData(memberFormData);
-
-    // Check if scheme was selected in MemberDetailsPage
     if (memberFormData.selectedSchemeId) {
       const numericId = Number(memberFormData.selectedSchemeId);
-      setSelectedScheme({
-        id: numericId,
-        name: memberFormData.selectedSchemeName || getSchemeName(numericId),
-      });
+      setSelectedScheme({ id: numericId, name: memberFormData.selectedSchemeName || getSchemeName(numericId) });
     }
-
-    // Move to next step
     setCurrentStep(2);
   };
 
-  // Create payment order
-  const createPaymentOrder = async (
-    amount,
-    defaultName,
-    defaultContact,
-    defaultRegNo,
-    defaultGroupCode
-  ) => {
-    try {
-      const orderPayload = {
-        amount: parseFloat(amount),
-        customer: {
-          name: defaultName,
-          contact: defaultContact,
-          REGNO: defaultRegNo,
-          GROUPCODE: defaultGroupCode,
-        },
-      };
-
-      console.log("Creating payment order with payload:", orderPayload);
-
-      const response = await fetch(
-        `${API_BASE_URL}/orders/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(orderPayload),
-        }
-      );
-
-      console.log("Create order response:", response);
-
-      if (!response.ok) {
-        throw new Error(`Failed to create order: HTTP ${response.status}`);
-      }
-
-      const orderData = await response.json();
-      console.log("Order created successfully:", orderData);
-
-      // Normalize API response
-      return {
-        orderId: orderData.order_id || orderData.orderId,
-        message: orderData.message,
-        status: orderData.status,
-      };
-    } catch (error) {
-      console.error("Error creating payment order:", error);
-      throw error;
-    }
-  };
-
-  // Initiate payment
-  // numericSchemeId/schemeFormData are needed to build the same userDetails payload
-  // buildMemberCreateBody() would produce, so the backend (webhook fallback AND the
-  // guarded /member/create path) has everything it needs to complete this join even
-  // if the app is closed/killed after payment. See MemberCreateService.js.
-  const initiatePayment = async (
-    orderId,
-    amount,
-    defaultRegNo,
-    defaultGroupCode,
-    numericSchemeId,
-    schemeFormData
-  ) => {
-    try {
-      const paymentPayload = {
-        merchantTxnNo: orderId,
-        amount: parseFloat(amount),
-        currencyCode: "356",
-        transactionType: "SALE",
-        payType: "ONLINE",
-        addlParam1: defaultRegNo,
-        addlParam2: defaultGroupCode,
-        returnURL: "https://app.bmgjewellers.com/api/v1/payment/success",
-      };
-
-      const memberCreateBody = buildMemberCreateBody({
-        memberData: transformedMemberData,
-        numericSchemeId,
-        groupCode: defaultGroupCode,
-        regNo: defaultRegNo,
-        schemeFormData,
-        referralCode: ReferralCode || "",
-        cashPayment: false,
-      });
-      // This request hasn't reached PhiCommerce yet, so there's no txnID to record on
-      // schemeCollectInsert.chqRtnReason — stamp the order id we already generated so
-      // the webhook/claim guard can key off it as soon as the payment settles.
-      memberCreateBody.schemeCollectInsert.chqRtnReason = orderId;
-
-      console.log("Initiating payment with payload:", paymentPayload);
-      console.log("🟢 Token present before initiating:", !!token);
-
-      // Step 1: Initiate sale — plain JSON envelope (multipart/FormData was tried first
-      // but React Native's fetch doesn't reliably negotiate a multipart boundary against
-      // Spring's multipart resolver — it blanket-failed with 415 on real devices).
-      const initiateRes = await fetch(`${API_BASE_URL}/payment/initiate-sale`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({
-          request: paymentPayload,
-          userType: "newjoin",
-          userDetails: JSON.stringify(memberCreateBody),
-        }),
-      });
-      const initiateData = await initiateRes.json();
-      console.log("initiate payment response:", initiateRes);
-      console.log("Initiate payment response:", initiateData);
-      if (!initiateRes.ok) throw new Error(initiateData.message);
-
-      if (!initiateData.tranCtx) throw new Error("Transaction context missing");
-
-      // Step 2: Get redirect/payment URL using tranCtx
-      const redirectRes = await fetch(`${API_BASE_URL}/payment/redirect-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({ tranCtx: initiateData.tranCtx }),
-      });
-      if (!redirectRes.ok) {
-        const errorText = await redirectRes.text();
-        throw new Error(errorText);
-      }
-
-      const paymentUrl = (await redirectRes.text())
-        .replace(/^"+|"+$/g, "")
-        .trim();
-      console.log("Payment URL:", paymentUrl);
-
-      return {
-        ...initiateData,
-        paymentUrl,
-      };
-    } catch (error) {
-      console.error("Error initiating payment:", error);
-      throw error;
-    }
-  };
-
-  // Check Payment Status from API
-  const checkPaymentStatus = async (merchantTxnNo) => {
-    try {
-      console.log("🔍 Checking payment status for:", merchantTxnNo);
-
-      const payload = {
-        merchantId: "T_03342",
-        merchantTxnNo,
-        originalTxnNo: merchantTxnNo,
-        transactionType: "STATUS",
-      };
-
-      console.log(
-        "📤 PAYPHI STATUS PAYLOAD:",
-        JSON.stringify(payload, null, 2)
-      );
-
-      const response = await fetchWithTimeout(
-        `${API_BASE_URL}/payment/status`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-        30000
-      );
-
-      const data = await response.json();
-      console.log("✅ Payment Status Response:", JSON.stringify(data, null, 2));
-
-      // Store payment data in AsyncStorage
-      await storePaymentData(data);
-
-      return data;
-    } catch (error) {
-      console.error("❌ Payment Status Check Error:", error);
-      throw error;
-    }
-  };
-
-  // Store Payphi Response in AsyncStorage
-  const storePaymentData = async (paymentStatus) => {
-    try {
-      const paymentData = {
-        payphiResponse: paymentStatus.payphiResponse,
-        orderStatus: paymentStatus.orderStatus,
-        message: paymentStatus.message,
-        timestamp: new Date().toISOString(),
-        orderDetails: orderDetails,
-      };
-
-      await AsyncStorage.setItem(
-        "paymentResponse",
-        JSON.stringify(paymentData)
-      );
-      console.log("💾 Payment data ", JSON.stringify(paymentData).length);
-    } catch (error) {
-      console.error("❌ Error storing payment data:", error);
-    }
-  };
-
-const submitMemberData = async (
-  numericSchemeId,
-  schemeFormData,
-  groupCode,
-  regNo,
-  paymentResponse = null,
-  cashPayment = false
-) => {
-  try {
-    const memberData = transformedMemberData;
-
-    // Build + submit via the shared service (also used by payment recovery,
-    // so a crash after payment completes with the exact same payload).
-    const requestBody = buildMemberCreateBody({
-      memberData,
-      numericSchemeId,
-      groupCode,
-      regNo,
-      schemeFormData,
-      referralCode: ReferralCode || "",
-      paymentResponse,
-      cashPayment,
-    });
-
-    console.log("📤 Submitting member creation for scheme:", numericSchemeId);
-    const responseData = await createMember(requestBody);
-    console.log("✅ Member creation succeeded");
-
-    // Send SMS notification
-    try {
-      await smsService.sendWelcomeSMS(
-        memberData.mobile,
-        memberData.pName,
-        getSchemeName(numericSchemeId),
-        schemeFormData.amount,
-        new Date().toISOString().slice(0, 10),
-        "BMG JEWELLERS PVT LTD"
-      );
-      console.log("✅ Welcome SMS sent successfully");
-    } catch (smsError) {
-      console.warn("⚠️ Failed to send welcome SMS:", smsError);
-    }
-
-    // Send join scheme notification
-    try {
-      await sendJoinSchemeNotification(
-        numericSchemeId,
-        parseFloat(schemeFormData.amount),
-        getSchemeName(numericSchemeId)
-      );
-      console.log("✅ Join scheme notification sent");
-    } catch (notifErr) {
-      console.warn("⚠️ Failed to send notification:", notifErr);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("❌ Error submitting member data:", error);
-    throw error;
-  }
-};
-
-  const handleWebViewNavigation = (request) => {
-    const url = request.url;
-    console.log("\n🌐 [JOIN-WEBVIEW] URL intercepted:", url);
-
-    if (paymentProcessedRef.current) {
-      console.log("🌐 [JOIN-WEBVIEW] Already processed — blocking URL");
-      return false;
-    }
-
-    // Strict, exact-path classification — never bare "/success" substrings.
-    const outcome = classifyGatewayUrl(url);
-
-    if (outcome === "success") {
-      console.log("✅ [JOIN-WEBVIEW] SUCCESS redirect — verifying with backend");
-      paymentProcessedRef.current = true;
-      setShowWebView(false);
-      setProcessingPayment(true);
-      setTimeout(() => handlePaymentSuccess(), 1000);
-      return false;
-    } else if (outcome === "failure") {
-      console.log("❌ [JOIN-WEBVIEW] FAILURE redirect detected");
-      paymentProcessedRef.current = true;
-      setShowWebView(false);
-      setProcessingPayment(true);
-      clearPendingPayment(orderDetails?.merchantTxnNo);
-      setTimeout(() => handlePaymentFailure(), 1000);
-      return false;
-    } else if (outcome === "cancel") {
-      console.log("🚫 [JOIN-WEBVIEW] CANCEL redirect detected");
-      paymentProcessedRef.current = true;
-      setShowWebView(false);
-      setProcessingPayment(false);
-      clearPendingPayment(orderDetails?.merchantTxnNo);
-      Alert.alert("Payment Cancelled", "You cancelled the payment.");
-      setIsProcessingPayment(false);
-      return false;
-    }
-
-    console.log("🌐 [JOIN-WEBVIEW] Allowing URL to load");
-    return true;
-  };
-
-  const handlePaymentSuccess = async () => {
-    const merchantTxnNo = orderDetails?.merchantTxnNo;
-    try {
-      console.log("\n🎯 [JOIN-PAYMENT-SUCCESS] handlePaymentSuccess triggered");
-
-      if (!merchantTxnNo) {
-        console.error("❌ [JOIN-PAYMENT-SUCCESS] No merchantTxnNo in orderDetails");
-        setProcessingPayment(false);
-        Alert.alert(
-          "Verification Error",
-          "We couldn't verify this payment (missing transaction reference). If money was deducted it will be verified automatically on your next app launch."
-        );
-        return;
-      }
-
-      // ---- Step 1: verify with the backend (poll up to 3 times) ----
-      let paymentStatus = null;
-      let verdict = "PENDING";
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        paymentStatus = await checkPaymentStatus(merchantTxnNo);
-        verdict = interpretPaymentStatus(paymentStatus);
-        console.log(`📊 [JOIN-PAYMENT-SUCCESS] status attempt ${attempt} → ${verdict}`);
-        if (verdict !== "PENDING") break;
-        await new Promise((r) => setTimeout(r, 3000));
-      }
-
-      if (verdict !== "PAID") {
-        // Payment NOT confirmed — never create the member/scheme.
-        setProcessingPayment(false);
-        if (verdict === "CANCELLED" || verdict === "FAILED") {
-          await clearPendingPayment(merchantTxnNo);
-          Alert.alert(
-            "Payment Not Completed",
-            verdict === "CANCELLED"
-              ? "The payment was cancelled. No scheme was created."
-              : "The payment failed. No scheme was created. You can try again.",
-            [{ text: "OK", onPress: () => setIsProcessingPayment(false) }]
-          );
-        } else {
-          // still pending — keep the record for automatic recovery
-          Alert.alert(
-            "Payment Being Processed",
-            "Your payment is still being processed. If money was deducted, your scheme will be created automatically — please reopen the app in a few minutes.",
-            [{ text: "OK", onPress: () => setIsProcessingPayment(false) }]
-          );
-        }
-        return;
-      }
-
-      // ---- Step 2: payment confirmed PAID — create member exactly once ----
-      if (await wasTxnProcessed(merchantTxnNo)) {
-        console.log("🔁 [JOIN-PAYMENT-SUCCESS] Txn already processed — skipping duplicate enrollment");
-        await clearPendingPayment(merchantTxnNo);
-        setProcessingPayment(false);
-        Alert.alert("Already Processed", "This payment was already applied to your scheme.", [
-          { text: "OK", onPress: () => setPaymentCompleted(true) },
-        ]);
-        return;
-      }
-
-      await submitMemberData(
-        currentPaymentData.numericSchemeId,
-        currentPaymentData.schemeData,
-        currentPaymentData.groupCode,
-        currentPaymentData.regNo,
-        paymentStatus // Pass the payment status response
-      );
-
-      await markTxnProcessed(merchantTxnNo);
-      await clearPendingPayment(merchantTxnNo);
-
-      console.log("✅ [JOIN-PAYMENT-SUCCESS] Member data submitted successfully");
-      setProcessingPayment(false);
-      Alert.alert(
-        "Success",
-        `Member added successfully to ${getSchemeName(
-          currentPaymentData.numericSchemeId
-        )}!`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setPaymentCompleted(true);
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("❌ [JOIN-PAYMENT-SUCCESS] Error:", error.message);
-      setProcessingPayment(false);
-      // Payment was verified PAID but enrollment failed — keep the pending
-      // record so recovery can retry, and tell the user the truth.
-      Alert.alert(
-        "Payment Received — Enrollment Pending",
-        "Your payment was received, but we couldn't finish creating your scheme right now. Don't worry — it will be completed automatically when you reopen the app. Your money is safe.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              setPaymentCompleted(true);
-            },
-          },
-        ]
-      );
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const handlePaymentFailure = () => {
-    console.log("❌ [JOIN-PAYMENT-FAILURE] handlePaymentFailure triggered");
-    setProcessingPayment(false);
-    Alert.alert(
-      "Payment Failed",
-      "Your payment was not successful. Please try again.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            setIsProcessingPayment(false);
-          },
-        },
-      ]
-    );
-  };
-
-  const handleSubmit = async (schemeFormData) => {
-    if (isSubmitting || isProcessingPayment) return;
-
-    const numericSchemeId = selectedScheme.id;
-    if (!numericSchemeId || isNaN(numericSchemeId)) {
-      Alert.alert("Error", "Please select a valid scheme.");
-      return;
-    }
-    if (!schemeFormData.amount || parseFloat(schemeFormData.amount) <= 0) {
-      Alert.alert("Error", "Please enter a valid amount.");
-      return;
-    }
-    if (!schemeFormData.accCode) {
-      Alert.alert("Error", "Please select a payment mode.");
-      return;
-    }
-
-    // For cash payments, proceed directly without payment flow
-    if (schemeFormData.modePay === "C" && schemeFormData.accCode !== "ONLINE") {
-      await processCashPayment(schemeFormData, numericSchemeId);
-      return;
-    }
-
-    // For online payments, start payment flow
-    await processOnlinePayment(schemeFormData, numericSchemeId);
-  };
-
-const processCashPayment = async (schemeFormData, numericSchemeId) => {
-  setIsSubmitting(true);
-  
-  try {
-    console.log("\n💰 [JOIN-CASH] Starting cash payment process");
-    console.log("💰 [JOIN-CASH] Scheme ID:", numericSchemeId);
-    console.log("💰 [JOIN-CASH] Scheme Form Data:", JSON.stringify(schemeFormData, null, 2));
-    // Member data intentionally not logged — contains Aadhaar/PII
-
-    if (!transformedMemberData) {
-      Alert.alert("Error", "Member data is missing. Please go back and fill member details.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // 1. Fetch scheme details
-    console.log("🔍 Fetching scheme details...");
-    const response = await fetch(
-      `${API_BASE_URL_OLD}/member/schemeid?schemeId=${numericSchemeId}`
-    );
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API Error Response:", errorText);
-      throw new Error(`Failed to fetch scheme details: HTTP ${response.status}`);
-    }
-    
-    const apiData = await response.json();
-    console.log("💰 [JOIN-CASH] Scheme API Data:", JSON.stringify(apiData, null, 2));
-    
-    if (!apiData || apiData.length === 0) {
-      throw new Error("No scheme data available for the selected scheme.");
-    }
-
-    // 2. Select appropriate scheme record
-    let selectedRecord;
-    const targetAmount = parseFloat(schemeFormData.amount);
-
-    if (targetAmount > 0) {
-      // Try exact match
-      selectedRecord = apiData.find(
-        (item) => parseFloat(item.AMOUNT || 0) === targetAmount
-      );
-      
-      // If no exact match, find the closest amount
-      if (!selectedRecord) {
-        selectedRecord = apiData.find(
-          (item) => parseFloat(item.AMOUNT || 0) > 0
-        );
-      }
-    }
-
-    // Fallback to first record
-    if (!selectedRecord) {
-      selectedRecord = apiData[0];
-    }
-
-    console.log("💰 [JOIN-CASH] Selected Scheme Record:", JSON.stringify(selectedRecord, null, 2));
-
-    const groupCode = selectedRecord.GROUPCODE;
-    const regNo = selectedRecord.CURRENTREGNO || selectedRecord.REGNO;
-
-    if (!groupCode || !regNo) {
-      throw new Error("No scheme data available for the selected scheme.");
-    }
-
-    console.log("💰 [JOIN-CASH] groupCode:", groupCode);
-    console.log("💰 [JOIN-CASH] regNo:", regNo);
-
-    // 3. Submit member data
-    console.log("📤 Submitting member data...");
-    const success = await submitMemberData(
-      numericSchemeId,
-      schemeFormData,
-      groupCode,
-      regNo,
-      null, // No online payment response
-      true  // Cash payment flag
-    );
-
-    if (!success) {
-      throw new Error("Member data submission failed.");
-    }
-
-    console.log("🎉 [JOIN-CASH] Cash payment process completed successfully");
-    
-    Alert.alert(
-      "Success",
-      `Member "${transformedMemberData.pName}" has been successfully added to "${getSchemeName(numericSchemeId)}" scheme!`,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            resetFormFields();
-            navigation.navigate("MainLanding");
-          },
-        },
-      ]
-    );
-
-  } catch (error) {
-    console.error("❌ Error during cash payment process:", error);
-    
-    let errorMessage = "Failed to create member. Please try again.";
-    
-    // Provide more specific error messages
-    if (error.message.includes("mobile")) {
-      errorMessage = "Mobile number validation failed. Please check the number.";
-    } else if (error.message.includes("Aadhaar")) {
-      errorMessage = "Aadhaar number validation failed. Please check the number.";
-    } else if (error.message.includes("HTTP")) {
-      errorMessage = "Network error. Please check your connection.";
-    } else if (error.message.includes("scheme data")) {
-      errorMessage = "Selected scheme is not available. Please try another scheme.";
-    } else if (error.message.includes("already exists")) {
-      errorMessage = "Member with these details already exists.";
-    } else if (error.message.includes("Member name")) {
-      errorMessage = "Member name is required.";
-    } else if (error.message.includes("Date of Birth")) {
-      errorMessage = "Date of Birth is required.";
-    }
-    
-    Alert.alert(
-      "Submission Error",
-      errorMessage,
-      [
-        {
-          text: "Retry",
-          onPress: () => {
-            // Optional: Retry logic
-            setIsSubmitting(false);
-          }
-        },
-        {
-          text: "Cancel",
-          onPress: () => setIsSubmitting(false),
-          style: "cancel"
-        }
-      ]
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-  const processOnlinePayment = async (schemeFormData, numericSchemeId) => {
-    console.log("\n💳 [JOIN-ONLINE] Starting online payment process");
-    console.log("💳 [JOIN-ONLINE] Scheme ID:", numericSchemeId);
-    console.log("💳 [JOIN-ONLINE] Amount:", schemeFormData.amount);
-    console.log("💳 [JOIN-ONLINE] Member:", transformedMemberData?.pName, transformedMemberData?.mobile);
-    setIsProcessingPayment(true);
-    try {
-      const response = await fetch(
-        `${API_BASE_URL_OLD}/member/schemeid?schemeId=${numericSchemeId}`
-      );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const apiData = await response.json();
-      console.log("💳 [JOIN-ONLINE] Scheme API data:", JSON.stringify(apiData, null, 2));
-
-      if (!apiData || apiData.length === 0)
-        throw new Error("No scheme data returned from API.");
-
-      let selectedRecord;
-
-      // Try to match by amount first
-      if (schemeFormData.amount) {
-        selectedRecord = apiData.find(
-          (item) =>
-            parseFloat(item.AMOUNT || 0) === parseFloat(schemeFormData.amount)
-        );
-      }
-
-      // If no matching amount found, just pick the first record (for schemes like DIGI_SILVER or FIXED_DEPOSIT)
-      if (!selectedRecord) {
-        selectedRecord = apiData[0];
-      }
-
-      const groupCode = selectedRecord.GROUPCODE;
-      const regNo = selectedRecord.CURRENTREGNO || selectedRecord.REGNO;
-
-      if (!groupCode || !regNo) {
-        throw new Error("No registration number available for this scheme. Please try again.");
-      }
-
-      console.log("💳 [JOIN-ONLINE] groupCode:", groupCode, "| regNo:", regNo);
-
-      const defaultName = transformedMemberData ? `${transformedMemberData.pName} ${transformedMemberData.sName}`.trim() : "Customer";
-      const defaultContact = transformedMemberData?.mobile || "";
-      const amount = schemeFormData.amount;
-
-      // Step 1: Create payment order
-      const orderData = await createPaymentOrder(
-        amount,
-        defaultName,
-        defaultContact,
-        regNo,
-        groupCode
-      );
-
-      console.log("💳 [JOIN-ONLINE] Order created:", JSON.stringify(orderData, null, 2));
-
-      if (!orderData.orderId) {
-        throw new Error("No order ID received from payment gateway");
-      }
-
-      // Step 2: Initiate payment
-      const paymentData = await initiatePayment(
-        orderData.orderId,
-        amount,
-        regNo,
-        groupCode,
-        numericSchemeId,
-        schemeFormData
-      );
-
-      console.log("💳 [JOIN-ONLINE] Payment initiate response:", JSON.stringify(paymentData, null, 2));
-      console.log("💳 [JOIN-ONLINE] Payment URL:", paymentData.paymentUrl);
-
-      if (!paymentData.paymentUrl) {
-        throw new Error("No payment URL received from payment gateway");
-      }
-
-      // Prepare order details for WebView
-      const currentOrderDetails = {
-        merchantTxnNo: orderData.orderId,
-        amount: parseFloat(amount),
-        customer: {
-          name: defaultName,
-          contact: defaultContact,
-          regNo: regNo,
-          groupCode: groupCode,
-        },
-        schemeInfo: {
-          schemeId: numericSchemeId,
-          schemeName: getSchemeName(numericSchemeId),
-        },
-        personalInfo: transformedMemberData ? {
-          name: transformedMemberData.pName,
-          surname: transformedMemberData.sName,
-          mobile: transformedMemberData.mobile,
-          email: transformedMemberData.email,
-        } : {},
-      };
-
-      // Store data for later use
-      setOrderDetails(currentOrderDetails);
-      setCurrentPaymentData({
-        numericSchemeId,
-        schemeData: schemeFormData,
-        groupCode,
-        regNo,
-      });
-
-      // Persist a recovery record BEFORE opening the gateway so a killed /
-      // closed app can still verify and complete this enrollment later.
-      await savePendingPayment({
-        merchantTxnNo: orderData.orderId,
-        type: "join",
-        payload: {
-          numericSchemeId,
-          schemeFormData,
-          groupCode,
-          regNo,
-          transformedMemberData,
-          referralCode: ReferralCode || "",
-          orderDetails: currentOrderDetails,
-        },
-      });
-
-      setPaymentUrl(paymentData.paymentUrl);
-      setShowWebView(true);
-      paymentProcessedRef.current = false;
-      console.log("💳 [JOIN-ONLINE] WebView opened with payment URL");
-    } catch (error) {
-      console.error("❌ [JOIN-ONLINE] Error:", error.message);
-      Alert.alert(
-        "Payment Error",
-        error.message || "Failed to process payment. Please try again."
-      );
-      setIsProcessingPayment(false);
-    }
-  };
-
   const resetFormFields = () => {
-    // Clear transformed member data
     setTransformedMemberData(null);
-
-    // Reset to original route scheme if available
     setSelectedScheme({
       id: routeSchemeId ? Number(routeSchemeId) : null,
       name: routeSchemeName || null,
     });
-
     setSchemeData({
       selectedSchemeId: routeSchemeId ? Number(routeSchemeId) : null,
       selectedGroupCodeObj: null,
@@ -1092,61 +185,161 @@ const processCashPayment = async (schemeFormData, numericSchemeId) => {
       modePay: "C",
       calculatedWeight: "",
     });
-
     setValidationErrors({});
     setSchemeOptions([]);
-    setShowWebView(false);
-    setPaymentUrl("");
-    paymentProcessedRef.current = false;
     setPaymentCompleted(false);
     setProcessingPayment(false);
   };
 
-  // Loading component for payment processing
+  const submitMemberData = async (numericSchemeId, schemeFormData, groupCode, regNo, paymentResponse = null, cashPayment = false) => {
+    const memberData = transformedMemberData;
+    const requestBody = buildMemberCreateBody({
+      memberData, numericSchemeId, groupCode, regNo,
+      schemeFormData, referralCode: ReferralCode || "",
+      paymentResponse, cashPayment,
+    });
+    const responseData = await createMember(requestBody);
+
+    try {
+      await smsService.sendWelcomeSMS(
+        memberData.mobile, memberData.pName,
+        getSchemeName(numericSchemeId), schemeFormData.amount,
+        new Date().toISOString().slice(0, 10), "BMG JEWELLERS PVT LTD"
+      );
+    } catch (smsError) {}
+
+    try {
+      await sendJoinSchemeNotification(numericSchemeId, parseFloat(schemeFormData.amount), getSchemeName(numericSchemeId));
+    } catch (notifErr) {}
+
+    return true;
+  };
+
+  const handleSubmit = async (schemeFormData) => {
+    if (isSubmitting || isProcessingPayment) return;
+    const numericSchemeId = selectedScheme.id;
+    if (!numericSchemeId || isNaN(numericSchemeId)) { Alert.alert("Error", "Please select a valid scheme."); return; }
+    if (!schemeFormData.amount || parseFloat(schemeFormData.amount) <= 0) { Alert.alert("Error", "Please enter a valid amount."); return; }
+    if (!schemeFormData.accCode) { Alert.alert("Error", "Please select a payment mode."); return; }
+
+    if (schemeFormData.modePay === "C" && schemeFormData.accCode !== "ONLINE") {
+      await processCashPayment(schemeFormData, numericSchemeId);
+      return;
+    }
+    await processOnlinePayment(schemeFormData, numericSchemeId);
+  };
+
+  const processCashPayment = async (schemeFormData, numericSchemeId) => {
+    setIsSubmitting(true);
+    try {
+      if (!transformedMemberData) {
+        Alert.alert("Error", "Member data is missing. Please go back and fill member details.");
+        return;
+      }
+      const response = await fetch(`${API_BASE_URL_OLD}/member/schemeid?schemeId=${numericSchemeId}`);
+      if (!response.ok) throw new Error(`Failed to fetch scheme details: HTTP ${response.status}`);
+      const apiData = await response.json();
+      if (!apiData || apiData.length === 0) throw new Error("No scheme data available for the selected scheme.");
+
+      let selectedRecord;
+      const targetAmount = parseFloat(schemeFormData.amount);
+      if (targetAmount > 0) {
+        selectedRecord = apiData.find((item) => parseFloat(item.AMOUNT || 0) === targetAmount);
+        if (!selectedRecord) selectedRecord = apiData.find((item) => parseFloat(item.AMOUNT || 0) > 0);
+      }
+      if (!selectedRecord) selectedRecord = apiData[0];
+
+      const groupCode = selectedRecord.GROUPCODE;
+      const regNo = selectedRecord.CURRENTREGNO || selectedRecord.REGNO;
+      if (!groupCode || !regNo) throw new Error("No scheme data available for the selected scheme.");
+
+      await submitMemberData(numericSchemeId, schemeFormData, groupCode, regNo, null, true);
+
+      Alert.alert(
+        "Success",
+        `Member "${transformedMemberData.pName}" has been successfully added to "${getSchemeName(numericSchemeId)}" scheme!`,
+        [{ text: "OK", onPress: () => { resetFormFields(); navigation.navigate("MainLanding"); } }]
+      );
+    } catch (error) {
+      let errorMessage = "Failed to create member. Please try again.";
+      if (error.message.includes("mobile")) errorMessage = "Mobile number validation failed.";
+      else if (error.message.includes("Aadhaar")) errorMessage = "Aadhaar number validation failed.";
+      else if (error.message.includes("HTTP")) errorMessage = "Network error. Please check your connection.";
+      else if (error.message.includes("scheme data")) errorMessage = "Selected scheme is not available.";
+      else if (error.message.includes("already exists")) errorMessage = "Member with these details already exists.";
+      else if (error.message.includes("Member name")) errorMessage = "Member name is required.";
+      else if (error.message.includes("Date of Birth")) errorMessage = "Date of Birth is required.";
+      Alert.alert("Submission Error", errorMessage, [
+        { text: "Retry", onPress: () => setIsSubmitting(false) },
+        { text: "Cancel", onPress: () => setIsSubmitting(false), style: "cancel" },
+      ]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const processOnlinePayment = async (schemeFormData, numericSchemeId) => {
+    setIsProcessingPayment(true);
+    try {
+      const response = await fetch(`${API_BASE_URL_OLD}/member/schemeid?schemeId=${numericSchemeId}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const apiData = await response.json();
+      if (!apiData || apiData.length === 0) throw new Error("No scheme data returned from API.");
+
+      let selectedRecord;
+      if (schemeFormData.amount) {
+        selectedRecord = apiData.find((item) => parseFloat(item.AMOUNT || 0) === parseFloat(schemeFormData.amount));
+      }
+      if (!selectedRecord) selectedRecord = apiData[0];
+
+      const groupCode = selectedRecord.GROUPCODE;
+      const regNo = selectedRecord.CURRENTREGNO || selectedRecord.REGNO;
+      if (!groupCode || !regNo) throw new Error("No registration number available for this scheme. Please try again.");
+
+      const defaultName = transformedMemberData ? `${transformedMemberData.pName} ${transformedMemberData.sName}`.trim() : "Customer";
+      const defaultContact = transformedMemberData?.mobile || "";
+      const amount = schemeFormData.amount;
+
+      const nmData = buildMemberCreateBody({
+        memberData: transformedMemberData, numericSchemeId, groupCode, regNo,
+        schemeFormData: { ...schemeFormData, modePay: "O" }, referralCode: ReferralCode || "",
+      });
+
+      const result = await payWithRazorpay({
+        token, newJoin: true,
+        body: { REGNO: regNo, GROUPCODE: groupCode, AMOUNT: Number(amount), NMDATA: nmData, SCHEMEDETAILS: nmData.schemeCollectInsert },
+        orderDetails: {
+          amount: Number(amount), payType: "ONLINE",
+          customer: { name: defaultName, contact: defaultContact, regNo, groupCode },
+          schemeInfo: { schemeId: numericSchemeId, schemeName: getSchemeName(numericSchemeId) },
+        },
+      });
+
+      if (!result.creditPending) resetFormFields();
+      navigation.navigate("PaymentSuccess", {
+        ...result, status: "SUCCESS", isCashPayment: false, isInstallmentPayment: false, paymentType: "join",
+      });
+    } catch (error) {
+      Alert.alert(
+        error.cancelled ? "Payment Cancelled" : "Payment Error",
+        error.message || "Failed to process payment. Please try again."
+      );
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
   const renderProcessingPayment = () => (
     <View style={styles.processingContainer}>
       <ActivityIndicator size="large" color="#d4af37" />
       <Text style={styles.processingText}>Processing your payment...</Text>
-      <Text style={styles.processingSubText}>
-        Please wait while we confirm your payment
-      </Text>
+      <Text style={styles.processingSubText}>Please wait while we confirm your payment</Text>
     </View>
   );
 
   const renderStep = () => {
-    if (paymentCompleted) {
-      return null;
-    }
-
-    if (processingPayment) {
-      return renderProcessingPayment();
-    }
-
-    if (showWebView) {
-      return (
-        <View style={{ flex: 1 }}>
-          <WebView
-            source={{ uri: paymentUrl }}
-            onShouldStartLoadWithRequest={handleWebViewNavigation}
-            onLoadStart={() => setPaymentLoading(true)}
-            onLoadEnd={() => setPaymentLoading(false)}
-            startInLoadingState={true}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            renderLoading={() => (
-              <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#d4af37" />
-              </View>
-            )}
-          />
-          {paymentLoading && (
-            <View style={styles.loader}>
-              <ActivityIndicator size="large" color="#d4af37" />
-            </View>
-          )}
-        </View>
-      );
-    }
+    if (paymentCompleted) return null;
+    if (processingPayment) return renderProcessingPayment();
 
     switch (currentStep) {
       case 1:
@@ -1190,37 +383,11 @@ const processCashPayment = async (schemeFormData, numericSchemeId) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loader: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  processingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    padding: 20,
-  },
-  processingText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 20,
-    color: COLORS.primary,
-    textAlign: "center",
-  },
-  processingSubText: {
-    fontSize: 14,
-    marginTop: 10,
-    color: COLORS.text,
-    textAlign: "center",
-    opacity: 0.7,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  loader: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255,255,255,0.8)", justifyContent: "center", alignItems: "center" },
+  processingContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background, padding: 20 },
+  processingText: { fontSize: 18, fontWeight: "bold", marginTop: 20, color: COLORS.primary, textAlign: "center" },
+  processingSubText: { fontSize: 14, marginTop: 10, color: COLORS.text, textAlign: "center", opacity: 0.7 },
 });
 
 export default AddNewMember;

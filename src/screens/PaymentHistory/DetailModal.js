@@ -60,14 +60,7 @@ const PaymentDetailScreen = ({ navigation, route }) => {
   }, [schemeData]);
 
   const handleDownloadReceipt = async () => {
-    console.log("FUNCTION TRIGGERED: handleDownloadReceipt");
 
-    console.log("PDF Data:", {
-      payment,
-      schemeInfo,
-      customerInfo,
-      schemeData,
-    });
 
     try {
       await PaymentReceiptPDF.generatePDF({

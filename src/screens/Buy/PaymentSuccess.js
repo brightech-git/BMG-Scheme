@@ -36,7 +36,6 @@ const PaymentSuccess = () => {
     creditPending, // payment confirmed PAID, but crediting to the scheme is still pending
   } = route.params || {};
 
-  console.log("[PaymentSuccess] Screen loaded with status:", status, "| creditPending:", !!creditPending);
 
   // Only treat as a full success when the credit/enrollment actually completed —
   // never celebrate (or SMS) an uncredited payment.
@@ -50,26 +49,18 @@ const PaymentSuccess = () => {
       !route.params?.isInstallmentPayment;
 
     setIsJoiningPayment(joiningPayment);
-    console.log("[PaymentSuccess] Payment type - Joining:", joiningPayment);
   }, [route.params, isInstallmentPayment, paymentType]);
 
   // Load stored payment data from AsyncStorage
   useEffect(() => {
     const loadStoredPaymentData = async () => {
-      console.log("[PaymentSuccess] Loading stored payment data");
       try {
         const storedData = await AsyncStorage.getItem("paymentResponse");
         if (storedData) {
           setStoredPaymentData(JSON.parse(storedData));
-          console.log("[PaymentSuccess] Stored payment data loaded");
         } else {
-          console.log("[PaymentSuccess] No stored payment data found");
         }
       } catch (error) {
-        console.error(
-          "[PaymentSuccess] Error loading stored payment data:",
-          error
-        );
       } finally {
         setLoading(false);
       }
@@ -80,7 +71,6 @@ const PaymentSuccess = () => {
   // Fetch updated phone details before sending SMS
   const fetchUpdatedPhoneDetails = async () => {
     try {
-      console.log("[PaymentSuccess] Fetching updated phone details...");
       
       // Get mobile number from existing data
       const mobile = productData?.personalInfo?.mobile || 
@@ -88,7 +78,6 @@ const PaymentSuccess = () => {
                      orderDetails?.customer?.contact;
       
       if (!mobile) {
-        console.warn("[PaymentSuccess] No mobile number found for fetching updated details");
         return null;
       }
 
@@ -96,18 +85,14 @@ const PaymentSuccess = () => {
       const response = await getPhoneDetails(mobile);
       
       if (response && response.data && response.data.length > 0) {
-        console.log("[PaymentSuccess] Updated phone data fetched successfully");
         return response.data[0]; // Return the first item from array
       } else if (response && response.length > 0) {
         // Handle case where response is directly the array
-        console.log("[PaymentSuccess] Updated phone data fetched successfully");
         return response[0];
       }
       
-      console.log("[PaymentSuccess] No updated phone data found");
       return null;
     } catch (error) {
-      console.error("[PaymentSuccess] Error fetching updated phone details:", error);
       return null;
     }
   };
@@ -117,14 +102,10 @@ const PaymentSuccess = () => {
   // ======================================================
   useEffect(() => {
     if (!isSuccess || smsSent) {
-      console.log(
-        "[PaymentSuccess] Skipped sending SMS - already sent or payment failed"
-      );
       return;
     }
 
     const sendSMS = async () => {
-      console.log("[PaymentSuccess] Starting SMS sending process");
       setSmsSending(true);
 
       try {
@@ -133,9 +114,7 @@ const PaymentSuccess = () => {
         
         if (updatedPhoneData) {
           setRefreshedPhoneData(updatedPhoneData);
-          console.log("[PaymentSuccess] Using refreshed phone data for SMS");
         } else {
-          console.log("[PaymentSuccess] Using original product data for SMS");
         }
 
         // Step 2: Determine which data source to use
@@ -149,7 +128,6 @@ const PaymentSuccess = () => {
                        null;
 
         if (!mobile) {
-          console.warn("[PaymentSuccess] No mobile number found");
           setSmsSending(false);
           return;
         }
@@ -221,15 +199,6 @@ const PaymentSuccess = () => {
         }
 
         // Log the data being sent for debugging
-        console.log("[PaymentSuccess] SMS Data:", {
-          mobile,
-          name,
-          schemeName,
-          amount,
-          monthYear,
-          paidDate,
-          formattedNextDue
-        });
 
         // ======================================================
         // SEND SMS ONLY
@@ -244,10 +213,8 @@ const PaymentSuccess = () => {
           formattedNextDue    // e.g., "01 Mar 2026"
         );
 
-        console.log("[PaymentSuccess] Payment SMS sent successfully");
         setSmsSent(true);
       } catch (err) {
-        console.error("[PaymentSuccess] Error sending SMS:", err);
         // You might want to show an error message to the user
       } finally {
         setSmsSending(false);
@@ -259,9 +226,7 @@ const PaymentSuccess = () => {
 
   // Auto navigate after 20 seconds
   useEffect(() => {
-    console.log("[PaymentSuccess] Auto-navigation timer started (20s)");
     const timer = setTimeout(() => {
-      console.log("[PaymentSuccess] Auto-navigating to MainLanding");
       navigation.reset({
         index: 0,
         routes: [{ name: "MainLanding" }],
@@ -271,7 +236,6 @@ const PaymentSuccess = () => {
   }, []);
 
   const handleContinue = () => {
-    console.log("[PaymentSuccess] User pressed OK - navigating to MainLanding");
     navigation.reset({
       index: 0,
       routes: [{ name: "MainLanding" }],
@@ -332,7 +296,7 @@ const PaymentSuccess = () => {
         />
 
         <Text style={styles.title}>
-          {creditPending ? "Payment Received" : "Payment Successful!"}
+          {creditPending ? "Payment Processing" : "Payment Successful!"}
         </Text>
 
         {creditPending ? (
@@ -343,8 +307,9 @@ const PaymentSuccess = () => {
             </Text>{" "}
             for{" "}
             <Text style={{ fontWeight: FONTS.weight.bold }}>{schemeName}</Text>{" "}
-            was received. Crediting it to your scheme is taking a little longer
-            than usual — it will be completed automatically. Your money is safe.
+            is awaiting confirmation or scheme credit. Please check Payment
+            History before making another payment. If it remains missing,
+            contact BMG with order reference {orderDetails?.orderId}.
           </Text>
         ) : (
           <>

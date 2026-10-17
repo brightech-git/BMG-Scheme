@@ -67,7 +67,6 @@ class OTPService {
 
     const response = await fetch(url, { method: "POST" });
     const data = await this._parseResponse(response);
-    console.log("Verify Contact OTP Response:", data);
 
     if (!response.ok) {
       throw new Error(data.error || data.message || "Verification failed");

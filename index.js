@@ -15,7 +15,6 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
 // ── Background notifee handler ────────────────────────────────────
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type === EventType.PRESS) {
-    console.log('[Notifee] Background press:', detail.notification?.data);
   }
 });
 

@@ -23,7 +23,7 @@ class DigiLockerService {
   async createVerificationUrl(userId, aadhaarNumber) {
     try {
       const verificationId = this.generateVerificationId();
-      
+
       const requestBody = {
         verification_id: verificationId,
         document_requested: ["AADHAAR"],
@@ -31,7 +31,6 @@ class DigiLockerService {
         user_flow: "signup",
       };
 
-      console.log('Creating DigiLocker URL:', requestBody);
 
       const response = await fetch(`${this.baseURL}/digilocker/create-url`, {
         method: 'POST',
@@ -42,8 +41,7 @@ class DigiLockerService {
       });
 
       const result = await response.json();
-      console.log('Create URL response:', result);
-      
+
       if (response.ok) {
         const verificationUrl = result.url || 
                                result.verification_url || 
@@ -77,7 +75,6 @@ class DigiLockerService {
    */
   async checkVerificationStatus(verificationId) {
     try {
-      console.log('Checking status for verificationId:', verificationId);
       const response = await fetch(
         `${this.baseURL}/digilocker/status?verification_id=${verificationId}`,
         {
@@ -89,18 +86,17 @@ class DigiLockerService {
       );
 
       const result = await response.json();
-      console.log('Status check response:', result);
-      
+
       if (response.ok) {
         const statusData = result.data || result;
-        
+
         // Check if verification is successful
         const isVerified = statusData.verified || 
                           statusData.status === 'AUTHENTICATED' || 
                           statusData.status === 'APPROVED' || 
                           statusData.status === 'SUCCESS' ||
                           statusData.status === 'VERIFIED';
-        
+
         return {
           success: true,
           verified: isVerified,
@@ -126,7 +122,6 @@ class DigiLockerService {
    */
   async getAadhaarDocument(verificationId) {
     try {
-      console.log('Fetching Aadhaar document for verificationId:', verificationId);
       const response = await fetch(
         `${this.baseURL}/digilocker/document/AADHAAR?verification_id=${verificationId}`,
         {
@@ -139,8 +134,7 @@ class DigiLockerService {
 
       const result = await response.json();
       // Do NOT log the full document — it contains the person's Aadhaar data (PII)
-      console.log('Aadhaar document fetch status:', response.status);
-      
+
       if (response.ok) {
         return {
           success: true,
@@ -167,7 +161,7 @@ class DigiLockerService {
     try {
       // Step 1: Check verification status
       const statusResult = await this.checkVerificationStatus(verificationId);
-      
+
       if (!statusResult.success || !statusResult.verified) {
         return {
           success: false,
@@ -179,7 +173,7 @@ class DigiLockerService {
 
       // Step 2: Get Aadhaar document data
       const documentResult = await this.getAadhaarDocument(verificationId);
-      
+
       if (!documentResult.success) {
       return {
         success: false,
@@ -190,14 +184,14 @@ class DigiLockerService {
     }
 
     const documentData = documentResult.data;
-    
+
     // Extract data from the document response
     const aadhaarNumber = documentData.uid || originalAadhaarNumber;
     const name = documentData.name || '';
     const dob = documentData.dob || '';
     const gender = documentData.gender || '';
     const address = this.formatAddress(documentData.split_address || {});
-    
+
     // Prepare verification data
     const verificationData = {
       success: true,
@@ -208,7 +202,7 @@ class DigiLockerService {
       aadhaarVerificationId: verificationId,
       aadhaarVerifiedAt: new Date().toISOString(),
       aadhaarStatus: documentData.status || 'VERIFIED',
-      
+
       // User details from Aadhaar
       userDetails: {
         name: name,
@@ -219,13 +213,13 @@ class DigiLockerService {
         yearOfBirth: documentData.year_of_birth || '',
         uid: aadhaarNumber
       },
-      
+
       // Include documentData for address parsing
       documentData: {
         ...documentData,
         split_address: documentData.split_address || {}
       },
-      
+
       message: 'Aadhaar verified successfully via DigiLocker'
     };
 
@@ -244,10 +238,10 @@ class DigiLockerService {
   /**
    * Format address from split_address object
    */
- 
+
 formatAddress(splitAddress) {
   if (!splitAddress) return '';
-  
+
   const parts = [
     splitAddress.house || '',
     splitAddress.street || '',
@@ -261,7 +255,7 @@ formatAddress(splitAddress) {
     splitAddress.country || 'India',
     splitAddress.pincode || ''
   ].filter(part => part.trim() !== '');
-  
+
   return parts.join(', ');
 }
 
@@ -284,11 +278,11 @@ formatAddress(splitAddress) {
   async verifyAadhaar(userId, aadhaarNumber) {
     try {
       const urlResult = await this.createVerificationUrl(userId, aadhaarNumber);
-      
+
       if (!urlResult.success) {
         return urlResult;
       }
-      
+
       return {
         success: true,
         verificationId: urlResult.verificationId,
@@ -311,11 +305,11 @@ formatAddress(splitAddress) {
   formatAadhaarNumber(aadhaar, mask = false) {
     if (!aadhaar) return '';
     const digits = aadhaar.replace(/\D/g, '');
-    
+
     if (mask && digits.length === 12) {
       return `XXXX XXXX ${digits.substring(8)}`;
     }
-    
+
     return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
   }
 

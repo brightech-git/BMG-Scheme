@@ -215,15 +215,15 @@ function MainLanding() {
       const response = await fetch(
         `${API_BASE_URL}/scheme-bonus/all_remainingDays?schemeId=${schemeId}&joinDate=${joinDate}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return data.remainingDays || 0;
     } catch (error) {
-      console.log("Error fetching remaining days:", error);
+      console.error("Error fetching remaining days:", error);
       return 0; // Return 0 if there's an error
     }
   }, []);
@@ -244,15 +244,13 @@ function MainLanding() {
         });
 
         if (!token) {
-          console.log("User denied notification permission");
         } else {
-          console.log("Notification setup completed");
         }
 
         const listeners = listenForNotifications();
         return () => removeNotificationListeners(listeners);
       } catch (err) {
-        console.log("Error initializing notifications:", err);
+        console.error("Error initializing notifications:", err);
       }
     };
 
@@ -277,7 +275,7 @@ function MainLanding() {
       setSchemeRules(rulesMap);
       return rulesMap;
     } catch (err) {
-      console.log("Error fetching scheme rules:", err);
+      console.error("Error fetching scheme rules:", err);
       return {};
     }
   }, []);
@@ -370,7 +368,7 @@ function MainLanding() {
           let remainingDays = 0;
           const schemeId = item.schemeSummary?.schemeId;
           const joinDate = item.schemeSummary?.joinDate || item.joinDate;
-          
+
           if (schemeId && joinDate) {
             // Format joinDate if needed (YYYY-MM-DD format)
             const formattedJoinDate = joinDate.split('T')[0]; // Remove time part if exists
@@ -412,10 +410,10 @@ function MainLanding() {
         // Wait for all remaining days to be fetched
         const processed = await Promise.all(processedPromises);
 
-      
+
         setProductData(processed);
       } catch (err) {
-        console.log("Error in fetchProductData:", err);
+        console.error("Error in fetchProductData:", err);
         setProductError("Failed to fetch schemes data");
       } finally {
         if (isRefresh) {
@@ -490,13 +488,13 @@ function MainLanding() {
 
   const renderProductCard = useCallback(
     (item) => {
-      // console.log("Rendering ProductCard with remainingDays:", item.remainingDays);
+
       return (
         <View style={styles.productCardContainer}>
           <ProductCard
             productData={item}
             navigation={navigation}
-            onPress={() => console.log("Pressed", item)}
+            onPress={() => {}}
             onPayNow={() => handlePayNow(item)}
             remainingDate={item.remainingDays || 0} // Pass remaining days to ProductCard
           />

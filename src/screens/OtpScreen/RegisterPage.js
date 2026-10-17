@@ -120,7 +120,7 @@ function RegisterPage({ navigation }) {
 
   const handleFieldChange = useCallback((fieldName, value) => {
     let processedValue = value;
-    
+
     if (fieldName === "phone") {
       processedValue = value.replace(/\D/g, "").slice(0, 10);
     } else if (fieldName === "referralCode") {
@@ -128,7 +128,7 @@ function RegisterPage({ navigation }) {
       processedValue = value.trim().toUpperCase();
       // Clear any referral error when user types
       setReferralError("");
-      
+
       // Auto-mark as applied if it has minimum length
       if (processedValue.length >= 4) {
         setReferralApplied(true);
@@ -290,11 +290,9 @@ function RegisterPage({ navigation }) {
         used_referral_code: formData.referralCode.trim() || ""
       };
 
-      console.log("📤 Sending registration data:", registrationData);
 
       const res = await userService.registerUser(registrationData);
 
-      console.log("📥 Registration response:", res);
 
       if (res.success) {
         await AsyncStorage.setItem(
@@ -309,7 +307,6 @@ function RegisterPage({ navigation }) {
           })
         );
 
-        console.log("✅ Registration successful!");
         showToast("Registration successful! OTP sent.");
         navigation.navigate("OTP", {
           phoneNumber: formData.phone,

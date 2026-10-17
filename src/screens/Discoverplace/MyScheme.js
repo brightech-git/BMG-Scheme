@@ -31,11 +31,10 @@ function DiscoverPlace({ navigation }) {
   // Enhanced fetchRemainingDays function using the new service
 const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
   try {
-    console.log(`📡 Fetching remaining days for schemeId: ${schemeId}, joinDate: ${joinDate}`);
-    
+
     // Format joinDate to YYYY-MM-DD format
     let formattedDate = joinDate;
-    
+
     // Convert to YYYY-MM-DD format if needed
     if (joinDate) {
       // Handle ISO format (2025-12-29T00:00:00)
@@ -50,29 +49,26 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
         }
       }
     }
-    
-    console.log(`🔗 Calling API: schemeId=${schemeId}, joinDate=${formattedDate}`);
-    
+
+
     // Use your API endpoint
     const apiUrl = `${API_BASE_URL}/scheme-bonus/all_remainingDays?schemeId=${schemeId}&joinDate=${formattedDate}`;
-    
-    console.log(`🌐 API URL: ${apiUrl}`);
-    
+
+
     // Make API call
     const response = await fetch(apiUrl);
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     // Log only what we need
-    console.log(`✅ API Success - remainingDays: ${data.remainingDays}`);
-    
+
     // Return ONLY the remainingDays value (not the whole object)
     return data.remainingDays || 0;
-    
+
   } catch (error) {
     console.error(`❌ Error in fetchRemainingDays:`, error.message || error);
     return 0; // Return 0 on error
@@ -80,21 +76,9 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
 }, []);
 
   const handlePayNow = (item) => {
-    const paymentData = {
-      regNo: item.regno,
-      groupCode: item.groupcode,
-      customerName: item.pname,
-      amount: item.schemeSummary?.amount || 0,
-      schemeName: item.schemeSummary?.schemeName,
-      schemes: productData,
-    };
-
-    console.log("🔵 handlePayNow item:", item);
-    console.log("🟢 paymentData:", paymentData);
-
     navigation.navigate("Buy", {
       productData: item,
-      paymentData,
+      commamt: item.COMMAMT ?? item.schemeSummary?.COMMAMT ?? 0,
     });
   };
 
@@ -105,17 +89,18 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
       const rulesMap = {};
 
       allSchemes.forEach((scheme) => {
-        rulesMap[scheme.schemeName?.trim()] = {
+        rulesMap[scheme.SchemeId] = {
           WeightLedger: scheme.WeightLedger,
           FixedIns: scheme.FixedIns,
           Instalment: scheme.Instalment,
+          COMMAMT: scheme.COMMAMT ?? 0,
         };
       });
 
       setSchemeRules(rulesMap);
       return rulesMap;
     } catch (err) {
-      console.log("Error fetching scheme rules:", err);
+      console.error("Error fetching scheme rules:", err);
       return {};
     }
   };
@@ -123,69 +108,63 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
   // Fetch remaining days for each product
   const fetchRemainingDaysForProducts = async (products) => {
     try {
-      console.log(`🔄 Fetching remaining days for ${products.length} products`);
-      
+
       const apiPromises = products.map(async (product, index) => {
         try {
           // Add a small delay to avoid overwhelming the server
           if (index > 0) {
             await new Promise(resolve => setTimeout(resolve, 200));
           }
-          
+
           // Get schemeId and joinDate from product
           const schemeId = product.schemeId || 
                           product.schemeSummary?.schemeId || 
                           product.schemeSummary?.schemeid;
-          
+
           const joinDate = product.joinDate || 
                           product.schemeSummary?.joinDate || 
                           product.schemeSummary?.Startdate ||
                           product.schemeSummary?.startdate ||
                           product.schemeSummary?.startDate;
-          
+
           if (!schemeId || !joinDate) {
-            console.log(`⚠️ Missing data for product ${product.regNo}: schemeId=${schemeId}, joinDate=${joinDate}`);
             return {
               product,
               apiResult: null,
             };
           }
-          
-          console.log(`📤 Calling API for product ${product.regNo}: schemeId=${schemeId}, joinDate=${joinDate}`);
+
           const apiResult = await fetchRemainingDays(schemeId, joinDate);
-          
+
           return {
             product,
             apiResult,
           };
         } catch (err) {
-          console.log(`❌ API error for product ${product.regNo}:`, err);
           return {
             product,
             apiResult: null,
           };
         }
       });
-      
+
       const apiResults = await Promise.all(apiPromises);
-      
+
       // Process results - only use API results
       const updatedProducts = apiResults.map(({ product, apiResult }) => {
         // Use API result if available, otherwise keep existing remainingDays or default to 0
         const remainingDays = (apiResult !== null && apiResult !== undefined) ? apiResult : 0;
-        
-        console.log(`📊 Product ${product.regNo}: API returned ${remainingDays} days`);
-        
+
+
         return {
           ...product,
           remainingDays,
         };
       });
-      
-      console.log(`🎉 Finished fetching remaining days for all products`);
+
       return updatedProducts;
     } catch (err) {
-      console.log("❌ Error in fetchRemainingDaysForProducts:", err);
+      console.error("❌ Error in fetchRemainingDaysForProducts:", err);
       // Return products without remaining days update on error
       return products.map(product => ({
         ...product,
@@ -205,7 +184,6 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
         return;
       }
 
-      console.log("📱 Fetching data for phone:", storedPhoneNumber);
 
       // Fetch scheme rules first
       const rules = await fetchSchemeRules();
@@ -229,7 +207,8 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
         const status = isActive ? "Active" : "Deactive";
 
         const schemeName = item.schemeSummary?.schemeName?.trim();
-        const schemeRule = rules[schemeName] || {};
+        const schemeIdKey = Number(item.schemeSummary?.schemeId || item.schemeSummary?.schemeid);
+        const schemeRule = rules[schemeIdKey] || {};
 
         // Determine scheme type based on API rules
         const isWeightScheme = schemeRule.WeightLedger === "Y";
@@ -251,11 +230,6 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
                         item.schemeSummary?.startdate ||
                         item.schemeSummary?.startDate;
 
-        console.log(`📅 Product ${item.regNo} dates:`, {
-          joinDate,
-          maturityDate: item.maturityDate,
-          schemeStartDate: item.schemeSummary?.Startdate,
-        });
 
         return {
           ...item,
@@ -266,6 +240,7 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
           maturitydate: item.maturityDate,
           joinDate, // Store joinDate for easy access
           remainingDays: 0, // Initialize
+          COMMAMT: schemeRule.COMMAMT ?? 0, // top-level for easy access in Buy.js
 
           /* 🔥 SCHEME SUMMARY WITH API RULES */
           schemeSummary: {
@@ -274,6 +249,7 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
               schemeRule.WeightLedger || item.schemeSummary?.WeightLedger,
             FixedIns: schemeRule.FixedIns || item.schemeSummary?.FixedIns,
             Instalment: schemeRule.Instalment || item.schemeSummary?.instalment,
+            COMMAMT: schemeRule.COMMAMT ?? item.schemeSummary?.COMMAMT ?? 0,
             schemeType: {
               isWeightScheme,
               isAmountScheme,
@@ -297,14 +273,11 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
       });
 
       // Fetch remaining days for all products from API only
-      console.log("🔄 Starting to fetch remaining days from API...");
       const productsWithRemainingDays = await fetchRemainingDaysForProducts(processedProducts);
-      
-      console.log("✅ Final products with remaining days:");
+
       productsWithRemainingDays.forEach(p => {
-        console.log(`   - ${p.regNo}: ${p.remainingDays} days (joinDate: ${p.joinDate})`);
       });
-      
+
       setProductData(productsWithRemainingDays);
       setError(null);
     } catch (err) {
@@ -327,8 +300,7 @@ const fetchRemainingDays = useCallback(async (schemeId, joinDate) => {
   const onRefresh = () => fetchPhoneSearchData(true);
 
   const renderProductCard = ({ item }) => {
-    console.log("🎨 Rendering ProductCard for", item.regNo, "- remainingDays:", item.remainingDays);
-    
+
     return (
       <ProductCard
         productData={item}

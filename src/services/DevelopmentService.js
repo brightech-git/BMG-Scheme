@@ -1,14 +1,15 @@
 // src/services/schemeService.js
 import { API_BASE_URL } from "../Config/API";
+import { fetchWithTimeout } from "../utils/PaymentUtils";
 
 export const getAppStatus = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/app-control/status`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/app-control/status`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
-    });
+    }, 10000);
 
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
@@ -16,7 +17,7 @@ export const getAppStatus = async () => {
 
     const data = await response.json();
 
-    console.log("API Response:", data); // ✅ Log first
+    {} // ✅ Log first
     return data; // ✅ Then return
 
     /*

@@ -237,9 +237,9 @@ const MemberDetailsPage = ({
       clearInterval(verificationPolling);
       setVerificationPolling(null);
     }
-    
+
     setShowDigiLockerWebView(false);
-    
+
     Alert.alert(
       "Verification Pending",
       "Your verification is being processed. Please wait a moment for the results.",
@@ -252,17 +252,17 @@ const MemberDetailsPage = ({
       "Check Verification",
       "Have you completed the verification in DigiLocker?",
       [
-        
+
         {
           text: "Cancel Verification",
           onPress: () => {
             setShowDigiLockerWebView(false);
-            
+
             if (verificationPolling) {
               clearInterval(verificationPolling);
               setVerificationPolling(null);
             }
-            
+
             setNomineeAadhaarStatus({
               isVerified: false,
               isVerifying: false,
@@ -270,13 +270,13 @@ const MemberDetailsPage = ({
               message: "",
               aadhaarData: null,
             });
-            
+
             setFormData(prev => ({
               ...prev,
               nomineeAadhaarVerified: false,
               nomineeAadhaarVerificationId: "",
             }));
-            
+
             Alert.alert(
               "Verification Cancelled",
               "You can try again or proceed with manual verification.",
@@ -354,7 +354,6 @@ const MemberDetailsPage = ({
         const currentUserId = await AsyncStorage.getItem("userId");
 
         if (!currentUserId) {
-          console.log("No userId available");
           Alert.alert(
             "Registration Required",
             "Please complete your KYC registration first.",
@@ -438,7 +437,7 @@ const MemberDetailsPage = ({
                   });
                 },
               }
-              
+
             ]
           );
           setApiLoading(false);
@@ -466,7 +465,7 @@ const MemberDetailsPage = ({
 
           setFormData((prev) => ({ ...prev, ...updatedForm }));
           setIsAadhaarValid(data.aadhaarVerified || false);
-          
+
           if (data.dateOfBirth) {
             const [year, month, day] = data.dateOfBirth.split("-");
             setSelectedDate({ day, month, year });
@@ -475,7 +474,7 @@ const MemberDetailsPage = ({
 
       } catch (error) {
         console.error("Error fetching user data:", error);
-        
+
         if (error.message.includes("Network request failed")) {
           Alert.alert(
             "Network Error",
@@ -583,7 +582,7 @@ const MemberDetailsPage = ({
           nomineeAadhaarNumber: memberForm.nomineeAadhaarNumber || prev.nomineeAadhaarNumber || "",
           nomineeAadhaarVerified: memberForm.nomineeAadhaarVerified || false,
           nomineeAadhaarVerificationId: memberForm.nomineeAadhaarVerificationId || "",
-          nomineeName: memberForm.nomineeName || prev.nomineeName || "",
+          // nomineeName: memberForm.nomineeName || prev.nomineeName || "",
           nomineeDOB: memberForm.nomineeDOB || prev.nomineeDOB || "",
           nomineeGender: memberForm.nomineeGender || prev.nomineeGender || "",
           nomineeAddress: memberForm.nomineeAddress || prev.nomineeAddress || "",
@@ -797,7 +796,7 @@ const MemberDetailsPage = ({
           const clearedNomineeFields = {
             nomineeAadhaarVerified: false,
             nomineeAadhaarVerificationId: "",
-            nomineeName: "",
+            // nomineeName: "",
             nomineeDOB: "",
             nomineeGender: "",
             nomineeAddress: "",
@@ -972,7 +971,7 @@ const MemberDetailsPage = ({
 
         if (aadhaarData.name) {
           updates.nomeni = aadhaarData.name;
-          updates.nomineeName = aadhaarData.name;
+          // updates.nomineeName = aadhaarData.name;
         }
 
         if (aadhaarData.dob) {
@@ -1439,8 +1438,9 @@ const MemberDetailsPage = ({
         if (panErr) errors.panNumber = panErr;
       }
 
-      // Aadhaar - only validate if not from API
-      if (!userData?.maskedAadhaar) {
+      // Aadhaar - skip if already verified (API user) or masked value present
+      const aadhaarAlreadyVerified = isAadhaarValid || userData?.aadhaarVerified || !!userData?.maskedAadhaar;
+      if (!aadhaarAlreadyVerified) {
         const aadhaarErr = validateAadhaar(
           d.aadharNumber?.replace(/\s/g, "") || ""
         );
@@ -1449,7 +1449,7 @@ const MemberDetailsPage = ({
 
       return errors;
     },
-    [nomineeAadhaarStatus.isVerified, userData, getUserAadhaarLast4]
+    [nomineeAadhaarStatus.isVerified, userData, getUserAadhaarLast4, isAadhaarValid]
   );
 
   const getMaskedAadhaarWithLast4 = (aadhaar) => {
@@ -1488,12 +1488,13 @@ const MemberDetailsPage = ({
         address2: formData.area.trim(),
         area: formData.area.trim(),
         city: formData.city.trim(),
-        pincode: formData.pincode,
-        selectedState: formData.state.trim(),
+        pinCode: formData.pincode,
+        state: formData.state.trim(),
         country: "India",
 
-        panNumber: formData.panNumber,
-        aadharNumber: formData.aadharNumber.replace(/\s/g, ""),
+        panno: formData.panNumber,
+        idProof: "Aadhaar",
+        idProofNo: userData?.maskedAadhaar || formData.aadharNumber.replace(/\s|-/g, ""),
         aadhaarVerified: isAadhaarValid || userData?.aadhaarVerified || false,
 
         nomeni: formData.nomeni.trim(),
@@ -1505,7 +1506,7 @@ const MemberDetailsPage = ({
           nomineeAadhaarStatus.verificationId ||
           formData.nomineeAadhaarVerificationId,
 
-        nomineeName: formData.nomineeName || formData.nomeni.trim(),
+        // nomineeName: formData.nomineeName || formData.nomeni.trim(),
         nomineeDOB: formData.nomineeDOB,
         nomineeGender: formData.nomineeGender,
         nomineeAddress: formData.nomineeAddress,
@@ -1538,7 +1539,6 @@ const MemberDetailsPage = ({
         apiContactNumber: userData?.contactNumber,
       };
 
-      console.log("Transformed data for next step:", transformedData);
 
       if (onNext && typeof onNext === "function") {
         onNext(transformedData);
@@ -2266,7 +2266,7 @@ const MemberDetailsPage = ({
         }
       }}
     />
-    
+
     {/* Add the warning message */}
     <View style={styles.warningContainer}>
       <Text style={styles.warningText}>
@@ -2275,7 +2275,7 @@ const MemberDetailsPage = ({
         Nominee Aadhaar must be different from the registered user's Aadhaar.
       </Text>
     </View>
-    
+
     {digiLockerUrl ? (
       <WebView
         source={{ uri: digiLockerUrl }}

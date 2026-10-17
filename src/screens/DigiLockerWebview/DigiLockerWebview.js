@@ -112,7 +112,6 @@ const DigiLockerWebViewScreen = () => {
   // Complete verification process (guarded — runs at most once)
   const completeVerification = async () => {
     if (completionStartedRef.current) {
-      console.log("completeVerification already started — skipping duplicate call");
       return;
     }
     completionStartedRef.current = true;
@@ -124,13 +123,7 @@ const DigiLockerWebViewScreen = () => {
         verificationId, 
         aadhaarNumber
       );
-      
-      console.log(
-        "Complete verification result — success:",
-        verificationResult?.success,
-        "| verified:",
-        verificationResult?.aadhaarVerified
-      );
+
 
       // If verification simply isn't finished yet (still pending), stay on this
       // screen and let the user finish or retry instead of kicking them out.
@@ -168,11 +161,11 @@ const DigiLockerWebViewScreen = () => {
           }
           return dobString;
         };
-        
+
         // Extract data for auto-fill
         const aadhaarData = verificationResult.userDetails || {};
         const documentData = verificationResult.documentData || {};
-        
+
         navigateBackToCaller({
           verificationData: verificationResult,
           aadhaarVerified: true,
@@ -253,7 +246,6 @@ const DigiLockerWebViewScreen = () => {
       !redirectHandledRef.current
     ) {
       redirectHandledRef.current = true;
-      console.log("Redirect to completion URL detected");
       // Give DigiLocker's backend a moment to persist status, then verify once
       setTimeout(() => {
         completeVerification();
@@ -333,7 +325,7 @@ const DigiLockerWebViewScreen = () => {
           javaScriptEnabled={true}
           domStorageEnabled={true}
         />
-        
+
         {isCheckingStatus && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={COLORS.primary} />

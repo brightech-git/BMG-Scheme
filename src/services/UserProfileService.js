@@ -9,7 +9,6 @@ const memberPhotoService = {
       if (!memberId) throw new Error("User ID not found in AsyncStorage");
 
       const endpoint = `${API_BASE_URL}/photo/${memberId}`;
-      console.log("Uploading to:", endpoint);
 
       // Ensure the URI starts with file:// (important for Android)
       const uri = image.uri.startsWith("file://")
@@ -25,11 +24,6 @@ const memberPhotoService = {
       });
 
       // Debug log to compare with Postman
-      console.log("FormData details:", {
-        uri,
-        name: image.fileName || `profile_${Date.now()}.jpg`,
-        type: image.type || "image/jpeg",
-      });
 
       const headers = {
         Accept: "application/json",
@@ -61,7 +55,6 @@ const memberPhotoService = {
         );
       }
 
-      console.log("Upload successful:", data);
       return data;
     } catch (error) {
       console.error("Upload Photo Error:", error);
@@ -75,7 +68,6 @@ const memberPhotoService = {
       if (!memberId) throw new Error("User ID not found in AsyncStorage");
 
       const endpoint = `${API_BASE_URL}/photo/${memberId}`;
-      console.log("Deleting photo from:", endpoint);
 
       const headers = {
         Accept: "application/json",
@@ -101,7 +93,6 @@ const memberPhotoService = {
         );
       }
 
-      console.log("Delete successful:", data);
       return data;
     } catch (error) {
       console.error("Delete Photo Error:", error);

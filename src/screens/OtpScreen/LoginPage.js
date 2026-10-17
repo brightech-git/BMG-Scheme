@@ -221,7 +221,6 @@ function LoginPage({ route }) {
       });
 
       if (res.success && res.data?.token) {
-        console.log("✅ Login Success:", res.data);
 
         const normalizedData = {
           ...res.data,
@@ -370,43 +369,25 @@ function LoginPage({ route }) {
                   <View style={styles.divider} />
                 </View>
 
-                {/* Social Buttons */}
-                {Platform.OS === "ios" ? (
-                  <TouchableOpacity
-                    style={[styles.googleButton, socialLoading && styles.disabledButton]}
-                    onPress={handleAppleSignIn}
-                    disabled={socialLoading}
-                  >
-                    {socialLoading ? (
-                      <ActivityIndicator color={COLORS.primary} />
-                    ) : (
-                      <View style={styles.googleButtonContent}>
-                        <Text style={[styles.googleButtonText, { fontSize: 18, marginRight: SIZES.md }]}>
-                          
-                        </Text>
-                        <Text style={styles.googleButtonText}>Continue with Apple</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.googleButton, socialLoading && styles.disabledButton]}
-                    onPress={handleGoogleSignIn}
-                    disabled={socialLoading}
-                  >
-                    {socialLoading ? (
-                      <ActivityIndicator color={COLORS.primary} />
-                    ) : (
-                      <View style={styles.googleButtonContent}>
-                        <Image
-                          source={require("../../assets/icons/google.png")}
-                          style={styles.googleIcon}
-                        />
-                        <Text style={styles.googleButtonText}>Continue with Google</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
+                {/* Google Button */}
+                <TouchableOpacity
+                  style={[styles.googleButton, googleLoading && styles.disabledButton]}
+                  onPress={handleGoogleSignIn}
+                  disabled={googleLoading}
+                >
+
+                  {googleLoading ? (
+                    <ActivityIndicator color={COLORS.primary} />
+                  ) : (
+                    <View style={styles.googleButtonContent}>
+                      <Image
+                        source={require("../../assets/icons/google.png")}
+                        style={styles.googleIcon}
+                      />
+                      <Text style={styles.googleButtonText}>Continue with Google</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
                 {/* Register */}
                 <View style={styles.registerContainer}>

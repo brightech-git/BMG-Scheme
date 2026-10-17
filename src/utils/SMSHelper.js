@@ -34,7 +34,6 @@ export async function checkAndSendDueSMS(product, user) {
       dueDate.toLocaleString("default", { month: "short", year: "numeric" }).toUpperCase(),
       dueDate.toLocaleDateString("en-GB").replace(/\//g, "-")
     );
-    console.log(`✅ Due SMS sent for ${user.name} for ${schemeName}`);
 
     // Mark SMS as sent today
     await AsyncStorage.setItem(smsKey, today.toDateString());

@@ -26,11 +26,8 @@ class PaymentReceiptPDF {
   // ---------------------------------------------------------------------------
   static async getCompanyData(forceRefresh = false) {
     try {
-      console.log("🔄 Fetching fresh company data from API...");
-      console.log("📡 API Endpoint:", this.API_ENDPOINTS.COMPANY);
 
       // Fetch fresh data from API with timeout
-      console.log("🌐 Making API request...");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
@@ -45,8 +42,6 @@ class PaymentReceiptPDF {
 
         clearTimeout(timeoutId);
 
-        console.log("📊 Response Status:", response.status);
-        console.log("📊 Response OK:", response.ok);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -57,7 +52,6 @@ class PaymentReceiptPDF {
         }
 
         const apiResponse = await response.json();
-        console.log("📥 API Response:", JSON.stringify(apiResponse, null, 2));
 
         if (!apiResponse.success) {
           console.warn("⚠️ API reported failure:", apiResponse.message);
@@ -84,7 +78,6 @@ class PaymentReceiptPDF {
           throw new Error("Invalid API response structure");
         }
 
-        console.log("✅ Company data extracted:", companyData);
 
         // Validate extracted data
         if (!this.isCompanyDataValid(companyData)) {
@@ -92,7 +85,6 @@ class PaymentReceiptPDF {
           throw new Error("Company data validation failed");
         }
 
-        console.log("✅ Using fresh company data from API");
 
         return companyData;
       } catch (fetchError) {
@@ -112,7 +104,7 @@ class PaymentReceiptPDF {
       });
 
       // Only use default data if API completely fails
-      console.log("🔄 API failed, returning default company data");
+      console.error("🔄 API failed, returning default company data");
       return this.getDefaultCompanyData();
     }
   }
@@ -120,7 +112,6 @@ class PaymentReceiptPDF {
   // Simplified validation method
   static isCompanyDataValid(companyData) {
     if (!companyData) {
-      console.log("❌ Company data is null/undefined");
       return false;
     }
 
@@ -132,7 +123,7 @@ class PaymentReceiptPDF {
       companyData.cname.trim().length > 0;
 
     if (!isValid) {
-      console.log("❌ Company data validation failed:", {
+      console.error("❌ Company data validation failed:", {
         hasCname: !!companyData.cname,
         cnameType: typeof companyData.cname,
         cnameLength: companyData.cname ? companyData.cname.trim().length : 0,
@@ -143,7 +134,7 @@ class PaymentReceiptPDF {
   }
 
   static getDefaultCompanyData() {
-    console.log("📄 Using default company data (API failed)");
+    console.error("📄 Using default company data (API failed)");
     return {
       companyId: "BMG",
       cname: "BMG Jewellers pvt. ltd.,",
@@ -163,7 +154,6 @@ class PaymentReceiptPDF {
 
   // Remove cache-related methods since we're not caching anymore
   static async clearCachedCompanyData() {
-    console.log("ℹ️ Caching is disabled - always fetching from API");
   }
 
   // ---------------------------------------------------------------------------
@@ -171,18 +161,13 @@ class PaymentReceiptPDF {
   // ---------------------------------------------------------------------------
   static async testAPIEndpoint() {
     try {
-      console.log("🧪 Testing API Endpoint...");
-      console.log("🔗 URL:", this.API_ENDPOINTS.COMPANY);
 
       const response = await fetch(this.API_ENDPOINTS.COMPANY);
-      console.log("📊 Response Status:", response.status);
 
       const text = await response.text();
-      console.log("📝 Raw Response (first 500 chars):", text.substring(0, 500));
 
       try {
         const json = JSON.parse(text);
-        console.log("📦 Parsed JSON:", JSON.stringify(json, null, 2));
         return { success: response.ok, status: response.status, data: json };
       } catch (parseError) {
         console.error("❌ JSON Parse Error:", parseError);
@@ -708,28 +693,17 @@ class PaymentReceiptPDF {
 
   static async generatePDF(responseData) {
     try {
-      console.log("🔄 Starting PDF generation...");
       const { payment, customerInfo, schemeInfo } =
         this.extractDataFromResponse(responseData);
 
-      console.log("📥 Extracted data:", {
-        receiptNo: payment.receiptNo,
-        amount: payment.amount,
-        customerName: customerInfo.customerName,
-      });
 
       // Load assets and company data in parallel
-      console.log("🖼️ Loading assets...");
       const [bgBase64, logoBase64, companyData] = await Promise.all([
         this.assetToBase64(this.ASSETS.BACKGROUND),
         this.assetToBase64(this.ASSETS.LOGO),
         this.getCompanyData(), // Always fetches fresh from API
       ]);
 
-      console.log("✅ Assets loaded, company data:", {
-        companyName: companyData.cname,
-        source: "Direct from API (no cache)",
-      });
 
       const html = this.generateReceiptHTML({
         payment,
@@ -740,7 +714,6 @@ class PaymentReceiptPDF {
         logoBase64,
       });
 
-      console.log("📄 Generating PDF from HTML...");
       const { uri } = await Print.printToFileAsync({
         html,
         width: 595, // A4 width in points
@@ -748,7 +721,6 @@ class PaymentReceiptPDF {
       });
 
       const fileName = `BMG_Receipt_${payment.receiptNo}_${Date.now()}.pdf`;
-      console.log("💾 PDF generated, saving as:", fileName);
 
       if (Platform.OS === "android") {
         const directoryUri = await this.getDirectoryUri();
@@ -766,11 +738,9 @@ class PaymentReceiptPDF {
           encoding: FileSystem.EncodingType.Base64,
         });
 
-        console.log("✅ PDF saved to:", newUri);
       } else {
         const newUri = FileSystem.documentDirectory + fileName;
         await FileSystem.moveAsync({ from: uri, to: newUri });
-        console.log("✅ PDF saved to:", newUri);
       }
 
       Alert.alert(
@@ -797,7 +767,6 @@ class PaymentReceiptPDF {
     try {
       const result = await this.generatePDF(responseData);
       if (result.success && result.uri) {
-        console.log("✅ PDF ready to share:", result.uri);
       }
       return result;
     } catch (error) {
@@ -808,9 +777,7 @@ class PaymentReceiptPDF {
 
   // Modified refresh method - just fetches fresh data
   static async refreshCompanyData() {
-    console.log("🔄 Refreshing company data from API...");
     const data = await this.getCompanyData();
-    console.log("✅ Company data refreshed from API:", data.cname);
     return data;
   }
 }

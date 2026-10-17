@@ -46,7 +46,7 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
           useNativeDriver: true,
         }),
       ]).start();
-      
+
       // Load existing phone number if available
       loadExistingPhone();
     } else {
@@ -74,7 +74,7 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
         setConfirmPhoneNumber(existingPhone);
       }
     } catch (error) {
-      console.log("Error loading existing phone:", error);
+      console.error("Error loading existing phone:", error);
     }
   };
 
@@ -139,9 +139,9 @@ const OtpModal = ({ visible, onClose, onVerified, showToast }) => {
     try {
       // Save to AsyncStorage
       await AsyncStorage.setItem("userPhoneNumber", phoneNumber);
-      
+
       showToast("Phone number verified successfully ✓");
-      
+
       // Call onVerified to maintain compatibility with your existing flow
       onVerified();
       resetModal();

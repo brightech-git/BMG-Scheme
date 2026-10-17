@@ -4,6 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createStackNavigator } from "@react-navigation/stack";
 import * as Screen from "../screens";
 import SplashScreen from "../screens/Splashscreen/SplashScreen";
+import ForceUpdateScreen from "../screens/ForceUpdate/ForceUpdateScreen";
+import { checkForAppUpdate } from "../utils/VersionChecker";
 
 
 const MainStack = createStackNavigator();
@@ -67,24 +69,28 @@ const AppContainer = React.forwardRef(function AppContainer(props, ref) {
 useEffect(() => {
   const checkUserState = async () => {
     try {
+      const updateInfo = await checkForAppUpdate(props.appStatus);
+      if (updateInfo?.forceUpdate) {
+        setInitialRoute({ name: "ForceUpdate", params: updateInfo });
+        return;
+      }
+
       const hasSeenOnboarding = await AsyncStorage.getItem("hasSeenOnboarding");
       const isMpinCreated = await AsyncStorage.getItem("isMpinCreated");
       const authToken = await AsyncStorage.getItem("authToken");
 
-      console.log("🟩 Storage Values:", { hasSeenOnboarding, isMpinCreated, authToken: !!authToken });
-
       if (!hasSeenOnboarding) {
-        setInitialRoute("OnboardingScreen");
+        setInitialRoute({ name: "OnboardingScreen" });
       } else if (!authToken) {
-        setInitialRoute("LoginPage");
+        setInitialRoute({ name: "LoginPage" });
       } else if (isMpinCreated === "true") {
-        setInitialRoute("VerifyMpinScreen");
+        setInitialRoute({ name: "VerifyMpinScreen" });
       } else {
-        setInitialRoute("MpinScreen");
+        setInitialRoute({ name: "MpinScreen" });
       }
     } catch (error) {
       console.error("❌ Error checking user state:", error);
-      setInitialRoute("LoginPage");
+      setInitialRoute({ name: "LoginPage" });
     }
   };
 
@@ -100,8 +106,10 @@ useEffect(() => {
     <NavigationContainer ref={ref}>
       <MainStack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName={initialRoute}
+        initialRouteName={initialRoute.name}
       >
+        {/* Force Update */}
+        <MainStack.Screen name="ForceUpdate" component={ForceUpdateScreen} initialParams={initialRoute.params} />
         {/* Onboarding & Auth Screens */}
         <MainStack.Screen name="OnboardingScreen" component={Screen.OnboardingScreen} />
         <MainStack.Screen name="LoginPage" component={Screen.LoginPage} />

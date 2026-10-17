@@ -55,7 +55,6 @@ function OtpPage({ navigation, route }) {
   // -------------------- DETECT OTP FROM MESSAGE --------------------
   const detectOtpFromMessage = (smsMessage) => {
     if (!smsMessage) return null;
-    console.log("📩 Analyzing SMS for OTP:", smsMessage);
 
     const patterns = [
       /your\s+otp\s+(?:for\s+\w+\s+)?is\s*(\d{6})/i,
@@ -68,19 +67,16 @@ function OtpPage({ navigation, route }) {
       const match = smsMessage.match(pattern);
       if (match) {
         const detected = match[1] || match[0];
-        console.log("✅ OTP Detected:", detected);
         return detected;
       }
     }
 
-    console.log("❌ No OTP detected");
     return null;
   };
 
   // -------------------- HANDLE INCOMING SMS --------------------
   useEffect(() => {
     if (message && smsListenerReady) {
-      console.log("📨 SMS message received:", message);
       const detectedOtp = detectOtpFromMessage(message);
 
       if (detectedOtp && detectedOtp.length === 6) {
@@ -147,15 +143,12 @@ function OtpPage({ navigation, route }) {
     const initializeSMSListener = async () => {
       if (Platform.OS === "android") {
         try {
-          console.log("🔄 Initializing SMS listener...");
           const hashCodes = await getHash();
           setAppHash(hashCodes);
-          console.log("📲 App Hash:", hashCodes);
 
           if (startListener) {
             startListener();
             setSmsListenerReady(true);
-            console.log("✅ SMS listener started successfully");
           }
         } catch (error) {
           console.error("❌ Error initializing SMS listener:", error);
@@ -188,7 +181,6 @@ function OtpPage({ navigation, route }) {
   useEffect(() => {
     const otpValue = otp.join("");
     if (otpValue.length === 6 && !verifying && !waitingForOtp) {
-      console.log("🔍 Auto-verifying:", otpValue);
       handleVerifyOtp();
     }
   }, [otp]);
@@ -224,7 +216,6 @@ const handleVerifyOtp = async () => {
     return;
   }
 
-  console.log("✅ Verifying OTP:", otpValue);
   setVerifying(true);
   setShowFullScreenLoader(true);
 
@@ -242,30 +233,23 @@ const handleVerifyOtp = async () => {
 
     if (res.success && res.data) {
       showToast("OTP verified successfully!");
-      
+
       const userData = res.data;
-      console.log("📋 User Data Received:", userData);
-      
+
       // Check if user has a used_referral_code in the response
       if (userData.used_referral_code) {
-        console.log("🎯 Found referral code to verify:", {
-          userId: userData.id,
-          referralCode: userData.used_referral_code
-        });
-        
+
         try {
           // Call the referral check API
           const referralCheckResponse = await userService.checkReferralCode(
             userData.id, 
             userData.used_referral_code
           );
-          
-          console.log("📨 Referral API Response:", referralCheckResponse);
-          
+
+
           if (referralCheckResponse.success) {
-            console.log("✅ Referral code verified successfully");
             showToast("Referral code applied successfully!");
-            
+
             // Save user data (with or without referral response data)
             await saveUserData(userData);
           } else {
@@ -282,11 +266,9 @@ const handleVerifyOtp = async () => {
         }
       } else {
         // No referral code to verify, just save user data
-        console.log("ℹ️ No referral code found in response");
         await saveUserData(userData);
       }
-      
-      console.log("User data saved successfully");
+
       await AsyncStorage.removeItem("tempUserData");
 
       stopListener && stopListener();

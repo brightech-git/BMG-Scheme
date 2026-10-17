@@ -1,82 +1,32 @@
 import * as Application from "expo-application";
-import * as Updates from "expo-updates";
-import { Alert, Linking, Platform } from "react-native";
+import { Platform } from "react-native";
 
-/**
- * Compare semantic versions (e.g. 1.1.1)
- * Returns true if current < target
- */
-const isVersionLower = (current, target) => {
-  const c = current.split(".").map(Number);
-  const t = target.split(".").map(Number);
-
-  for (let i = 0; i < t.length; i++) {
-    if ((c[i] || 0) < t[i]) return true;
-    if ((c[i] || 0) > t[i]) return false;
-  }
-  return false;
+const parseVersion = (value) => {
+  if (typeof value !== "string" || !/^\d+(\.\d+)*$/.test(value.trim())) return null;
+  return value.trim().split(".").map(Number);
 };
 
-export const checkForAppUpdate = async () => {
-  try {
-    const localVersion = Application.nativeApplicationVersion;
-    console.log("Installed version:", localVersion);
+// Reuse the status response already fetched at startup; no second network request.
+export const checkForAppUpdate = async (appStatus) => {
+  if (Platform.OS !== "android") return null;
+  console.log("App version check:", {
+    installedVersion: Application.nativeApplicationVersion,
+    latestVersion: appStatus?.appversion,
+  });
+  const installed = parseVersion(Application.nativeApplicationVersion);
+  const latest = parseVersion(appStatus?.appversion);
+  if (!installed || !latest) return null;
 
-    /* ----------------------------------
-       1️⃣ OTA UPDATE (ONLY IN PROD)
-    ----------------------------------- */
-    if (!__DEV__ && Updates.isEnabled) {
-      const otaUpdate = await Updates.checkForUpdateAsync();
-      if (otaUpdate.isAvailable) {
-        console.log("OTA update available, fetching...");
-        await Updates.fetchUpdateAsync();
-        await Updates.reloadAsync();
-        return;
-      }
+  for (let i = 0; i < Math.max(installed.length, latest.length); i++) {
+    if ((installed[i] || 0) > (latest[i] || 0)) return null;
+    if ((installed[i] || 0) < (latest[i] || 0)) {
+      return {
+        forceUpdate: true,
+        installedVersion: Application.nativeApplicationVersion,
+        latestVersion: appStatus.appversion,
+        storeUrl: "https://play.google.com/store/apps/details?id=com.bmg.bmgscheme",
+      };
     }
-
-    /* ----------------------------------
-       2️⃣ PLAY STORE VERSION CHECK
-    ----------------------------------- */
-const response = await fetch(
-  "https://raw.githubusercontent.com/JK-08/BMG-Scheme/Update-Alerts/app-version.json?ts=" +
-    Date.now()
-);
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch version config");
-    }
-
-    const text = await response.text();
-    let config;
-    try {
-      config = JSON.parse(text);
-    } catch {
-      throw new Error("Invalid JSON in app-version.json");
-    }
-
-    if (Platform.OS === "android") {
-      const { latestVersion, playStoreUrl } = config.android;
-      console.log("Latest version:", latestVersion);
-
-      // ✨ OPTIONAL UPDATE ONLY
-      if (isVersionLower(localVersion, latestVersion)) {
-        Alert.alert(
-          "New Version Available ✨",
-          `A new version (${latestVersion}) is available.\nYou're using ${localVersion}.`,
-          [
-            { text: "Later", style: "cancel" },
-            {
-              text: "Update",
-              onPress: () => Linking.openURL(playStoreUrl),
-            },
-          ]
-        );
-      } else {
-        console.log("App is up to date. Installed:", localVersion);
-      }
-    }
-  } catch (error) {
-    console.log("Version check failed:", error.message || error);
   }
+  return null;
 };

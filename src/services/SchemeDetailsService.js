@@ -2,10 +2,9 @@ import { API_BASE_URL_OLD } from "../Config/API";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const getPhoneDetails = async (userPhoneNumber) => {
-  console.log("Fetching phone details for:", userPhoneNumber);
 
   try {
-    
+
     const response = await fetch(
       `${API_BASE_URL_OLD}/account/phone_details?phoneNo=${encodeURIComponent(
         userPhoneNumber
@@ -13,7 +12,7 @@ export const getPhoneDetails = async (userPhoneNumber) => {
       {
         method: "GET",
         headers: {
-         
+
           "Content-Type": "application/json",
         },
       }

@@ -236,7 +236,6 @@ const NotificationsPage = () => {
   const getUserIdFromStorage = async () => {
     try {
       const storedUserId = await AsyncStorage.getItem('userId');
-      console.log('Retrieved userId from storage:', storedUserId);
       return storedUserId;
     } catch (error) {
       console.error('Error fetching userId from AsyncStorage:', error);
@@ -249,14 +248,11 @@ const NotificationsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log(`Loading notifications for userId: ${currentUserId}`);
 
       const response = await NotificationService.getUserNotifications(currentUserId);
-      console.log(`Notifications response:`, response);
 
       if (response.code === 200) {
         const notificationsData = response.data || [];
-        console.log(`Setting ${notificationsData.length} notifications`);
         setNotifications(notificationsData);
         await loadUnreadCount(currentUserId);
       } else {
@@ -277,10 +273,9 @@ const NotificationsPage = () => {
 
   const loadUnreadCount = async (currentUserId) => {
     try {
-      console.log(`Loading unread count for userId: ${currentUserId}`);
       const response = await NotificationService.getUnreadCount(currentUserId);
-      // console.log(`Unread count response:`, response);
-      
+
+
       if (response.code === 200) {
         setUnreadCount(response.data.unreadCount || 0);
       }
@@ -342,7 +337,6 @@ const NotificationsPage = () => {
         notificationId,
         currentUserId
       );
-      console.log(`Mark as read response:`, response);
 
       if (
         response.code === 200 &&
@@ -372,10 +366,9 @@ const NotificationsPage = () => {
       Alert.alert("Error", "User ID not available");
       return;
     }
-    
+
     try {
       const response = await NotificationService.markAllAsRead(userId);
-      console.log(`Mark all as read response:`, response);
 
       if (response.code === 200) {
         // Update all notifications to read

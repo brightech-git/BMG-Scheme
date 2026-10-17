@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StatusBar } from "react-native";
+import { AppState, StatusBar } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FlashMessage from "react-native-flash-message";
 import AppContainer from "./src/routes/routes";
@@ -9,19 +10,57 @@ import { colors } from "./src/utils/colors";
 import useFonts from "./src/utils/Fonts";
 import { getAppStatus } from "./src/services/DevelopmentService";
 import "react-native-gesture-handler";
-import { checkForAppUpdate } from "./src/utils/VersionChecker";
 import {
   listenForNotifications,
   removeNotificationListeners,
   checkInitialNotification,
+  ensureNotificationPermission,
+  registerForPushNotifications,
 } from "./src/utils/Notification";
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [appEnabled, setAppEnabled] = useState(null);
+  const [appStatus, setAppStatus] = useState(null);
   const [devMessage, setDevMessage] = useState("");
   const navigationRef = useRef(null);
   const listenersRef = useRef(null);
+
+  useEffect(() => {
+    if (!fontsLoaded || appEnabled !== true) return;
+    let disposed = false;
+    let timer;
+    let previousState = AppState.currentState;
+    const checkPermission = async () => {
+      if (await ensureNotificationPermission()) {
+        const userId = await AsyncStorage.getItem("userId");
+        await registerForPushNotifications(userId);
+      }
+    };
+    const runCheck = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (!disposed && AppState.currentState === "active" && navigationRef.current?.isReady()) {
+          checkPermission().catch(error => {
+            console.error("Notification setup failed:", error);
+          });
+        } else if (!disposed && AppState.currentState === "active") {
+          runCheck();
+        }
+      }, 750);
+    };
+    if (previousState === "active") runCheck();
+    const subscription = AppState.addEventListener("change", nextState => {
+      const wasBackground = previousState === "background" || previousState === null;
+      previousState = nextState;
+      if (wasBackground && nextState === "active") runCheck();
+    });
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      subscription.remove();
+    };
+  }, [fontsLoaded, appEnabled]);
 
   useEffect(() => {
     const initApp = async () => {
@@ -30,12 +69,12 @@ export default function App() {
         setFontsLoaded(true);
 
         const response = await getAppStatus();
+        setAppStatus(response);
         setAppEnabled(response?.enabled ?? false);
         setDevMessage(response?.message ?? "");
 
-        setTimeout(() => checkForAppUpdate(), 1500);
       } catch (error) {
-        console.log("Initialization error:", error);
+        console.error("Initialization error:", error);
         setAppEnabled(false);
       }
     };
@@ -73,7 +112,7 @@ export default function App() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle="dark-content" />
       {appEnabled ? (
-        <AppContainer ref={navigationRef} />
+        <AppContainer ref={navigationRef} appStatus={appStatus} />
       ) : (
         <DevelopmentScreen message={devMessage} />
       )}

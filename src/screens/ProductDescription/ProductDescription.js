@@ -39,12 +39,6 @@ const [selectedPayment, setSelectedPayment] = useState(null);
 // Add preview function
 // Update the handlePreviewReceipt function to log data
 const handlePreviewReceipt = useCallback((payment) => {
-  console.log('Previewing payment:', {
-    payment,
-    customerInfo,
-    schemeInfo,
-    productData
-  });
   setSelectedPayment(payment);
   setPreviewVisible(true);
 }, [customerInfo, schemeInfo, productData]);
@@ -145,7 +139,7 @@ const closePreview = useCallback(() => {
   // Handle download receipt
   const handleDownloadReceipt = useCallback(
     async (payment) => {
-      // console.log("PDF Data:", {
+
       //   payment,
       //   schemeInfo,
       //   customerInfo,
@@ -212,7 +206,6 @@ const closePreview = useCallback(() => {
       ]);
 
       await PaymentReceiptPDF.refreshCompanyData();
-      console.log("Company data refreshed");
     } catch (error) {
       Alert.alert("Error", "Failed to refresh data. Please try again.");
     } finally {
@@ -498,7 +491,7 @@ return (
         <MainSchemeCard />
         <PaymentHistorySection />
       </ScrollView>
-      
+
       {/* Add Receipt Preview Modal */}
       <ReceiptPreviewModal
         visible={previewVisible}
@@ -508,7 +501,7 @@ return (
         customerInfo={customerInfo}
         schemeData={productData}
       />
-      
+
       <BottomTab />
     </View>
   </ImageBackground>

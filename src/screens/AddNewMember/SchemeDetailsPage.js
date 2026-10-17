@@ -66,9 +66,9 @@ const SchemeDetailsPage = ({
   const numericSchemeId = selectedSchemeId ? Number(selectedSchemeId) : null;
   const effectiveSchemeName = schemeName || "Select a Scheme";
 
-  console.log("🔍 SchemeDetailsPage - Simplified:");
-  console.log("numericSchemeId:", numericSchemeId);
-  console.log("effectiveSchemeName:", effectiveSchemeName);
+
+
+
 
   const [formData, setFormData] = useState({
     selectedSchemeId: numericSchemeId,
@@ -93,7 +93,6 @@ const SchemeDetailsPage = ({
   // Update formData when scheme changes
   useEffect(() => {
     if (numericSchemeId && numericSchemeId !== formData.selectedSchemeId) {
-      console.log("🔄 Updating formData with scheme ID:", numericSchemeId);
       setFormData(prev => ({
         ...prev,
         selectedSchemeId: numericSchemeId,
@@ -106,13 +105,8 @@ const SchemeDetailsPage = ({
     }
   }, [numericSchemeId]);
 
-  const MINIMUM_AMOUNT_MAP = {
-    1: 1,    // Amount Scheme
-    2: 100,  // Digi Silver
-    3: 10000, // Fixed Deposit
-  };
-
-  const minAmount = MINIMUM_AMOUNT_MAP[numericSchemeId] || 0;
+  const minAmount = schemes?.find((s) => s.SchemeId === numericSchemeId)?.COMMAMT || 0;
+  console.log("💰 Min Amount for SchemeId", numericSchemeId, ":", minAmount);
 
   // Keyboard handling
   useEffect(() => {
@@ -187,7 +181,6 @@ const SchemeDetailsPage = ({
         ...formData,
         selectedSchemeId: numericSchemeId
       };
-      console.log("Submitting scheme data:", dataToSubmit);
       onSubmit(dataToSubmit);
     } else {
       Alert.alert(
@@ -225,6 +218,7 @@ const SchemeDetailsPage = ({
       schemeOptions,
       isFetchingSchemeOptions,
       API_BASE_URL_OLD,
+      minAmount,
     };
 
     switch (numericSchemeId) {

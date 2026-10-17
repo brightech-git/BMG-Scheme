@@ -31,7 +31,6 @@ const SchemeDetailsScreen = ({ route }) => {
   const fetchUserPhoneNumber = async () => {
     try {
       const phone = await AsyncStorage.getItem("userPhoneNumber");
-      console.log("Retrieved phone from AsyncStorage:", phone);
       setUserPhoneNumber(phone);
       return phone;
     } catch (error) {
@@ -60,11 +59,10 @@ const SchemeDetailsScreen = ({ route }) => {
         });
       }
 
-      console.log("Scheme rules fetched:", rulesMap);
       setSchemeRules(rulesMap);
       return rulesMap;
     } catch (err) {
-      console.log("Error fetching scheme rules:", err);
+      console.error("Error fetching scheme rules:", err);
       return {};
     }
   };
@@ -81,7 +79,6 @@ const SchemeDetailsScreen = ({ route }) => {
       }
 
       const API_URL = `${API_BASE_URL_OLD}/account/phone_details?phoneNo=${phone}`;
-      console.log("Fetching data from:", API_URL);
 
       const response = await fetch(API_URL, {
         method: "GET",
@@ -97,7 +94,6 @@ const SchemeDetailsScreen = ({ route }) => {
       }
 
       const data = await response.json();
-      console.log("API Response:", data);
 
       if (!data || !Array.isArray(data)) {
         console.warn("Invalid data format received from API:", data);
@@ -218,16 +214,7 @@ const SchemeDetailsScreen = ({ route }) => {
       });
 
       setSchemes(processedSchemes);
-      console.log("Fetched", processedSchemes.length, "schemes");
       if (processedSchemes.length > 0) {
-        console.log("Sample scheme data for BuyPage:", {
-          schemeName: processedSchemes[0]?.schemeSummary?.schemeName,
-          weightLedger: processedSchemes[0]?.schemeSummary?.WeightLedger,
-          fixedIns: processedSchemes[0]?.schemeSummary?.FixedIns,
-          amount: processedSchemes[0]?.amount,
-          regNo: processedSchemes[0]?.regNo,
-          groupCode: processedSchemes[0]?.groupCode,
-        });
       }
     } catch (err) {
       console.error("Error fetching schemes:", err);
@@ -430,14 +417,6 @@ const SchemeDetailsScreen = ({ route }) => {
   };
 
   const handlePayNow = (scheme) => {
-    console.log("🟢 Navigating to Buy with scheme:", {
-      schemeName: scheme.schemeSummary?.schemeName,
-      weightLedger: scheme.schemeSummary?.WeightLedger,
-      fixedIns: scheme.schemeSummary?.FixedIns,
-      amount: scheme.amount,
-      regNo: scheme.regNo,
-      groupCode: scheme.groupCode,
-    });
 
     navigation.navigate("Buy", {
       productData: scheme,

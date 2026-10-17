@@ -72,12 +72,10 @@ const AadhaarVerificationScreen = () => {
     setError("");
 
     try {
-      console.log("Initiating DigiLocker Aadhaar verification");
 
       // Start API call
       const result = await digiLockerService.verifyAadhaar(userId, aadhaarNum);
 
-      console.log("Verification start success:", result?.success);
 
       if (result.success && result.verificationUrl) {
         setVerificationData(result);
@@ -90,7 +88,6 @@ const AadhaarVerificationScreen = () => {
           userId,
           sourceScreen: "profile", // Add this
           onVerificationComplete: (verifiedData) => {
-            console.log("Verification complete in WebView:", verifiedData);
 
             if (onVerificationComplete) {
               // Ensure we have the Aadhaar number in the response
@@ -105,7 +102,6 @@ const AadhaarVerificationScreen = () => {
                   verifiedData.message || "Aadhaar verification completed",
               };
 
-              console.log("Calling onVerificationComplete with:", completeData);
               onVerificationComplete(completeData);
             }
 

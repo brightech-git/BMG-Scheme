@@ -16,7 +16,6 @@ export async function getAppBanners() {
     const json = await response.json();
 
     // NEW API returns → { sliders: [ ... ] }
-    console.log("Fetched sliders:", json.sliders?.length);
 
     return json.sliders || [];
   } catch (error) {

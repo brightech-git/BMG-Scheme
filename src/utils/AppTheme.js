@@ -30,6 +30,16 @@ const fontScale = (size) => {
 // 🎨 COLOR PALETTE
 // ============================================
 export const COLORS = {
+  update: {
+    background: "#FBF7F0",
+    ink: "#30261D",
+    muted: "#7C7062",
+    gold: "#AC8345",
+    goldLight: "#E8D5AC",
+    border: "#E8DECD",
+    surface: "#F3EBDD",
+    dark: "#30271F",
+  },
   // ===== PRIMARY BRAND COLORS =====
   primary: "#FF5724", // Client's Primary Color (Orange-Red)
   primaryLight: "#FF7A4D", // Light orange

@@ -8,7 +8,6 @@ export default function MainPageWithYouTube() {
   const playerRef = useRef(null);
 
   const onReady = useCallback(() => {
-    console.log("✅ Video is ready to play");
   }, []);
 
   return (
